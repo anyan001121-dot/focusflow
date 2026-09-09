@@ -63,3 +63,10 @@ def resume(state: FocusFlowState) -> FocusFlowState:
 def reset_all() -> FocusFlowState:
     db.delete_all()
     return new_state()
+
+
+def set_language(state: FocusFlowState, lang: str) -> FocusFlowState:
+    updated = dict(state)
+    updated["lang"] = lang
+    db.save_state(updated)
+    return updated

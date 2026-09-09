@@ -53,19 +53,22 @@ def active_provider() -> str:
     return "mock"
 
 
-def complete_json(system: str, user: str, *, task: str) -> Any:
+def complete_json(system: str, user: str, *, task: str, lang: str = "en") -> Any:
     """Ask the active LLM provider for a JSON response.
 
     `task` names the mock_llm heuristic to use if no API key is configured
     (e.g. "brain_dump", "breakdown", "interruption"), so the mock provider
-    can produce a schema-appropriate stub without a real model call.
+    can produce a schema-appropriate stub without a real model call. `lang`
+    ("en"/"zh") is forwarded to the mock provider so its canned text matches
+    the caller-supplied `system` prompt's requested language; for real
+    providers the language instruction already lives in `system`.
     """
     provider = active_provider()
     if provider == "anthropic":
         return _extract_json(_call_anthropic(system, user))
     if provider == "openai":
         return _extract_json(_call_openai(system, user))
-    return mock_llm.run(task, user)
+    return mock_llm.run(task, user, lang=lang)
 
 
 def _call_anthropic(system: str, user: str) -> str:

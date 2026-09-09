@@ -1,5 +1,7 @@
 # FocusFlow
 
+[中文说明](README.zh-CN.md)
+
 An AI executive-function assistant for people with ADHD or attention/task-management
 difficulties. **FocusFlow does not diagnose or treat ADHD.** It exists to close the
 gap between *"I know what I need to do"* and *"I can actually start and continue
@@ -18,6 +20,8 @@ required to take the next useful action.**
   is captured to a Later list instead of derailing your current task.
 - **Resume** — after an interruption, see only what you were doing, what's done,
   and what's next — not the whole project again.
+- **Bilingual** — the whole UI, plus the agent's own responses, switch between
+  English and 中文 from a sidebar selector.
 
 ## Quickstart
 
@@ -69,6 +73,7 @@ multi-agent system. State persists locally in SQLite (`focusflow/db.py`).
 | LLM provider wrapper | `focusflow/llm.py`, `focusflow/mock_llm.py` |
 | Prompts | `focusflow/prompts.py` |
 | Persistence | `focusflow/db.py` |
+| UI strings (EN/中文) | `focusflow/i18n.py` |
 | UI | `app.py` (Streamlit) |
 
 ## Agent behaviour rules

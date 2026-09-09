@@ -6,3 +6,5 @@ venv/
 *.db
 .streamlit/
 .DS_Store
+.agents/
+.claude/

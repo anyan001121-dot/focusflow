@@ -24,6 +24,9 @@ class FocusFlowState(TypedDict, total=False):
     # routing
     intent: str
 
+    # UI / agent output language: "en" or "zh"
+    lang: str
+
     # active work
     current_goal: str
     current_task: str
@@ -52,6 +55,7 @@ def new_state() -> FocusFlowState:
     return FocusFlowState(
         user_input="",
         intent="",
+        lang="en",
         current_goal="",
         current_task="",
         current_step="",

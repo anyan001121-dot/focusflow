@@ -3,9 +3,22 @@
 Shared design rule (see PRD section 7-8): never overwhelm the user, always
 surface exactly one next action, prefer a first step startable in 2-5
 minutes, no vague actions, no motivational filler.
+
+Every prompt keeps its JSON schema (keys) fixed in English, but instructs
+the model to write the natural-language *values* in the requested UI
+language ("en" or "zh"), so the agent's output matches the user's chosen
+interface language.
 """
 
-BRAIN_DUMP_SYSTEM = """You help someone with executive-function difficulty (e.g. ADHD) \
+_LANG_NAMES = {"en": "English", "zh": "Simplified Chinese"}
+
+
+def _lang_instruction(lang: str) -> str:
+    name = _LANG_NAMES.get(lang, "English")
+    return f"\n\nWrite all natural-language text VALUES in {name}. Keep JSON keys exactly as specified."
+
+
+_BRAIN_DUMP_BASE = """You help someone with executive-function difficulty (e.g. ADHD) \
 turn a messy brain dump into a short, calm task list.
 
 Given the user's raw, possibly rambling input, split it into individual \
@@ -20,7 +33,7 @@ Do not add commentary, advice, or extra keys. Do not merge unrelated tasks. \
 Keep each task's text short and concrete."""
 
 
-BREAKDOWN_SYSTEM = """You help someone with executive-function difficulty start a task \
+_BREAKDOWN_BASE = """You help someone with executive-function difficulty start a task \
 that currently feels too large or vague to begin.
 
 Given a goal or task description, produce:
@@ -45,7 +58,7 @@ Do not include grammar/reference/polishing steps this early. Do not add \
 motivational language."""
 
 
-INTERRUPTION_SYSTEM = """The user is in a Focus Session working on one specific task and \
+_INTERRUPTION_BASE = """The user is in a Focus Session working on one specific task and \
 just said something new. Decide whether it is:
 - related: still about the current task (a clarification, a sub-step, progress update), or
 - unrelated: a different task/thought that should be filed away for later without \
@@ -54,3 +67,22 @@ derailing the current focus.
 You will be given the current task and the new message. Respond with ONLY JSON, \
 no prose, no markdown fences:
 {"related": true|false, "reason": "<one short sentence>"}"""
+
+
+def brain_dump_system(lang: str = "en") -> str:
+    return _BRAIN_DUMP_BASE + _lang_instruction(lang)
+
+
+def breakdown_system(lang: str = "en") -> str:
+    return _BREAKDOWN_BASE + _lang_instruction(lang)
+
+
+def interruption_system(lang: str = "en") -> str:
+    return _INTERRUPTION_BASE + _lang_instruction(lang)
+
+
+# Backwards-compatible module-level constants (English), kept for any direct
+# imports; prefer the *_system(lang) functions above.
+BRAIN_DUMP_SYSTEM = brain_dump_system("en")
+BREAKDOWN_SYSTEM = breakdown_system("en")
+INTERRUPTION_SYSTEM = interruption_system("en")

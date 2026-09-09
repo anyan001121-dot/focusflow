@@ -78,8 +78,9 @@ def _route(state: FocusFlowState) -> str:
 # ---------------------------------------------------------------------------
 
 def brain_dump_node(state: FocusFlowState) -> dict:
+    lang = state.get("lang", "en")
     result = llm.complete_json(
-        prompts.BRAIN_DUMP_SYSTEM, state["user_input"], task="brain_dump"
+        prompts.brain_dump_system(lang), state["user_input"], task="brain_dump", lang=lang
     )
     tasks = result.get("tasks", [])
     actionable = [t for t in tasks if t.get("actionable", True)]
@@ -102,8 +103,11 @@ def brain_dump_node(state: FocusFlowState) -> dict:
 
 
 def breakdown_node(state: FocusFlowState) -> dict:
+    lang = state.get("lang", "en")
     goal = state.get("user_input", "").strip()
-    result = llm.complete_json(prompts.BREAKDOWN_SYSTEM, goal, task="breakdown")
+    result = llm.complete_json(
+        prompts.breakdown_system(lang), goal, task="breakdown", lang=lang
+    )
     first = result["first_step"]
     next_steps = result.get("next_steps", [])
 
@@ -130,12 +134,13 @@ def breakdown_node(state: FocusFlowState) -> dict:
 
 
 def interruption_node(state: FocusFlowState) -> dict:
+    lang = state.get("lang", "en")
     prompt_input = (
         f"Current task: {state.get('current_task', '')}\n"
         f"New message: {state.get('user_input', '')}"
     )
     result = llm.complete_json(
-        prompts.INTERRUPTION_SYSTEM, prompt_input, task="interruption"
+        prompts.interruption_system(lang), prompt_input, task="interruption", lang=lang
     )
     related = result.get("related", False)
     later_list = list(state.get("later_list", []))
@@ -179,14 +184,20 @@ def continue_focus_node(state: FocusFlowState) -> dict:
             },
         }
 
-    summary = f"Finished '{state.get('current_task', 'the task')}' in {len(completed)} step(s)."
+    task_name = state.get("current_task", "")
+    steps_count = len(completed)
+    summary = f"Finished '{task_name}' in {steps_count} step(s)."  # internal log only
     return {
         "completed_steps": completed,
         "focus_mode": False,
         "current_step": "",
         "next_action": "",
         "session_summary": summary,
-        "response": {"type": "task_complete", "session_summary": summary},
+        "response": {
+            "type": "task_complete",
+            "current_task": task_name,
+            "steps_count": steps_count,
+        },
     }
 
 
@@ -212,13 +223,7 @@ def resume_node(state: FocusFlowState) -> dict:
 
 
 def clarify_node(state: FocusFlowState) -> dict:
-    return {
-        "response": {
-            "type": "clarify",
-            "message": "What's on your mind? You can dump several things at once, "
-            "or name one thing you want to start.",
-        }
-    }
+    return {"response": {"type": "clarify"}}
 
 
 # ---------------------------------------------------------------------------
