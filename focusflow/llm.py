@@ -53,7 +53,9 @@ def active_provider() -> str:
     return "mock"
 
 
-def complete_json(system: str, user: str, *, task: str, lang: str = "en") -> Any:
+def complete_json(
+    system: str, user: str, *, task: str, lang: str = "en", ratio: float | None = None
+) -> Any:
     """Ask the active LLM provider for a JSON response.
 
     `task` names the mock_llm heuristic to use if no API key is configured
@@ -61,14 +63,18 @@ def complete_json(system: str, user: str, *, task: str, lang: str = "en") -> Any
     can produce a schema-appropriate stub without a real model call. `lang`
     ("en"/"zh") is forwarded to the mock provider so its canned text matches
     the caller-supplied `system` prompt's requested language; for real
-    providers the language instruction already lives in `system`.
+    providers the language instruction already lives in `system`. `ratio`
+    is the user's long-term actual/estimated time ratio (see
+    focusflow/db.py:record_step_duration) -- real providers get the same
+    signal via the personalization note baked into `system`, the mock
+    provider needs it passed explicitly since it never reads `system`.
     """
     provider = active_provider()
     if provider == "anthropic":
         return _extract_json(_call_anthropic(system, user))
     if provider == "openai":
         return _extract_json(_call_openai(system, user))
-    return mock_llm.run(task, user, lang=lang)
+    return mock_llm.run(task, user, lang=lang, ratio=ratio)
 
 
 def _call_anthropic(system: str, user: str) -> str:

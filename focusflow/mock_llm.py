@@ -26,11 +26,11 @@ _LOW_URGENCY_WORDS = [
 _IDEA_WORDS = ["idea:", "maybe i should", "或许可以", "也许可以", "考虑一下"]
 
 
-def run(task: str, user_text: str, lang: str = "en") -> dict:
+def run(task: str, user_text: str, lang: str = "en", ratio: float | None = None) -> dict:
     if task == "brain_dump":
         return _brain_dump(user_text)
     if task == "breakdown":
-        return _breakdown(user_text, lang)
+        return _breakdown(user_text, lang, ratio)
     if task == "interruption":
         return _interruption(user_text, lang)
     raise ValueError(f"mock_llm: unknown task {task!r}")
@@ -72,7 +72,19 @@ _TEMPLATES = [
 ]
 
 
-def _breakdown(goal_text: str, lang: str = "en") -> dict:
+def _scaled_minutes(base_minutes: int, ratio: float | None) -> int:
+    """Adapt a base estimate using the user's long-term actual/estimated ratio.
+
+    Clamped so personalization nudges the number without producing silly
+    extremes off a small sample.
+    """
+    if not ratio:
+        return base_minutes
+    scaled = base_minutes * max(0.5, min(ratio, 2.5))
+    return max(2, round(scaled))
+
+
+def _breakdown(goal_text: str, lang: str = "en", ratio: float | None = None) -> dict:
     low = goal_text.lower()
     action = None
     for keywords, template_en, template_zh in _TEMPLATES:
@@ -91,12 +103,12 @@ def _breakdown(goal_text: str, lang: str = "en") -> dict:
         next_steps = [
             {
                 "action": "找出下一步最小的一个具体细节。",
-                "estimated_minutes": 5,
+                "estimated_minutes": _scaled_minutes(5, ratio),
                 "completion_condition": "你已经说出了一件具体要做的事。",
             },
             {
                 "action": "只做那一件事，先不打磨、不完善其他部分。",
-                "estimated_minutes": 10,
+                "estimated_minutes": _scaled_minutes(10, ratio),
                 "completion_condition": "那件事做完了，不完美也没关系。",
             },
         ]
@@ -105,12 +117,12 @@ def _breakdown(goal_text: str, lang: str = "en") -> dict:
         next_steps = [
             {
                 "action": "Identify the single smallest next detail to act on.",
-                "estimated_minutes": 5,
+                "estimated_minutes": _scaled_minutes(5, ratio),
                 "completion_condition": "You have named one concrete thing to do next.",
             },
             {
                 "action": "Do that one thing, without editing or polishing anything else.",
-                "estimated_minutes": 10,
+                "estimated_minutes": _scaled_minutes(10, ratio),
                 "completion_condition": "That one thing is done, imperfect is fine.",
             },
         ]
@@ -119,7 +131,7 @@ def _breakdown(goal_text: str, lang: str = "en") -> dict:
         "task_title": goal_text.strip(),
         "first_step": {
             "action": action,
-            "estimated_minutes": 5,
+            "estimated_minutes": _scaled_minutes(5, ratio),
             "completion_condition": completion_condition,
         },
         "next_steps": next_steps,

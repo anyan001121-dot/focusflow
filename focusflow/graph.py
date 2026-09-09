@@ -5,6 +5,7 @@
         -> breakdown_node       (one goal -> one small first step)
         -> interruption_node    (focus-mode aside -> Later List, keep focus)
         -> continue_focus_node  ("done" -> advance to next queued step)
+        -> split_step_node      ("too big" -> break current step into smaller ones)
         -> resume_node          (rebuild a minimal "where you left off")
         -> clarify_node         (empty/unrecognized input)
 
@@ -30,6 +31,20 @@ _RESUME_WORDS = ["resume", "i'm back", "im back", "continue", "我回来了", "�
 _DONE_WORDS = ["done", "finished", "completed", "完成了", "做完了", "finish"]
 
 _URGENCY_RANK = {"high": 0, "medium": 1, "low": 2}
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _minutes_since(iso_ts: str) -> float | None:
+    if not iso_ts:
+        return None
+    try:
+        started = datetime.fromisoformat(iso_ts)
+    except ValueError:
+        return None
+    return max(0.0, (datetime.now(timezone.utc) - started).total_seconds() / 60.0)
 
 
 # ---------------------------------------------------------------------------
@@ -104,12 +119,15 @@ def brain_dump_node(state: FocusFlowState) -> dict:
 
 def breakdown_node(state: FocusFlowState) -> dict:
     lang = state.get("lang", "en")
+    hint = state.get("personalization_hint", "")
+    ratio = state.get("estimate_ratio") or None
     goal = state.get("user_input", "").strip()
     result = llm.complete_json(
-        prompts.breakdown_system(lang), goal, task="breakdown", lang=lang
+        prompts.breakdown_system(lang, hint), goal, task="breakdown", lang=lang, ratio=ratio
     )
     first = result["first_step"]
     next_steps = result.get("next_steps", [])
+    now = _now()
 
     return {
         "current_goal": goal,
@@ -121,7 +139,9 @@ def breakdown_node(state: FocusFlowState) -> dict:
         "completed_steps": [],
         "focus_mode": True,
         "interruption_count": 0,
-        "start_time": datetime.now(timezone.utc).isoformat(),
+        "start_time": now,
+        "step_start_time": now,
+        "breakdown_was_split": False,
         "response": {
             "type": "focus_start",
             "current_goal": goal,
@@ -166,6 +186,10 @@ def continue_focus_node(state: FocusFlowState) -> dict:
     if state.get("current_step"):
         completed.append(state["current_step"])
 
+    actual_minutes = _minutes_since(state.get("step_start_time", ""))
+    estimated_minutes_for_step = state.get("estimated_time", 0)
+    now = _now()
+
     queue = list(state.get("task_queue", []))
     if queue:
         nxt = queue.pop(0)
@@ -175,12 +199,15 @@ def continue_focus_node(state: FocusFlowState) -> dict:
             "current_step": nxt["action"],
             "next_action": nxt["action"],
             "estimated_time": nxt.get("estimated_minutes", 5),
+            "step_start_time": now,
             "response": {
                 "type": "step_advance",
                 "completed_steps": completed,
                 "current_step": nxt["action"],
                 "estimated_time": nxt.get("estimated_minutes", 5),
                 "completion_condition": nxt.get("completion_condition", ""),
+                "actual_minutes": actual_minutes,
+                "estimated_minutes_for_step": estimated_minutes_for_step,
             },
         }
 
@@ -192,11 +219,44 @@ def continue_focus_node(state: FocusFlowState) -> dict:
         "focus_mode": False,
         "current_step": "",
         "next_action": "",
+        "step_start_time": "",
         "session_summary": summary,
         "response": {
             "type": "task_complete",
             "current_task": task_name,
             "steps_count": steps_count,
+            "breakdown_was_split": state.get("breakdown_was_split", False),
+            "actual_minutes": actual_minutes,
+            "estimated_minutes_for_step": estimated_minutes_for_step,
+        },
+    }
+
+
+def split_step_node(state: FocusFlowState) -> dict:
+    """The current step still feels too big -- ask for a smaller first step
+    without losing progress or abandoning the task."""
+    lang = state.get("lang", "en")
+    ratio = state.get("estimate_ratio") or None
+    current = state.get("current_step", "")
+    result = llm.complete_json(
+        prompts.breakdown_system(lang), current, task="breakdown", lang=lang, ratio=ratio
+    )
+    first = result["first_step"]
+    rest = result.get("next_steps", [])
+    new_queue = rest + list(state.get("task_queue", []))
+
+    return {
+        "current_step": first["action"],
+        "next_action": first["action"],
+        "estimated_time": first.get("estimated_minutes", 5),
+        "task_queue": new_queue,
+        "breakdown_was_split": True,
+        "step_start_time": _now(),
+        "response": {
+            "type": "step_split",
+            "current_step": first["action"],
+            "estimated_time": first.get("estimated_minutes", 5),
+            "completion_condition": first.get("completion_condition", ""),
         },
     }
 
@@ -238,6 +298,7 @@ def build_graph():
     graph.add_node("new_task", breakdown_node)
     graph.add_node("interruption", interruption_node)
     graph.add_node("continue_focus", continue_focus_node)
+    graph.add_node("split_step", split_step_node)
     graph.add_node("resume", resume_node)
     graph.add_node("clarify", clarify_node)
 
@@ -250,11 +311,15 @@ def build_graph():
             "new_task": "new_task",
             "interruption": "interruption",
             "continue_focus": "continue_focus",
+            "split_step": "split_step",
             "resume": "resume",
             "clarify": "clarify",
         },
     )
-    for node in ("brain_dump", "new_task", "interruption", "continue_focus", "resume", "clarify"):
+    for node in (
+        "brain_dump", "new_task", "interruption", "continue_focus",
+        "split_step", "resume", "clarify",
+    ):
         graph.add_edge(node, END)
 
     return graph.compile()

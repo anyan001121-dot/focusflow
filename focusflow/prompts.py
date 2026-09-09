@@ -73,8 +73,9 @@ def brain_dump_system(lang: str = "en") -> str:
     return _BRAIN_DUMP_BASE + _lang_instruction(lang)
 
 
-def breakdown_system(lang: str = "en") -> str:
-    return _BREAKDOWN_BASE + _lang_instruction(lang)
+def breakdown_system(lang: str = "en", hint: str = "") -> str:
+    extra = f"\n\nPersonalization note based on this user's history: {hint}" if hint else ""
+    return _BREAKDOWN_BASE + _lang_instruction(lang) + extra
 
 
 def interruption_system(lang: str = "en") -> str:

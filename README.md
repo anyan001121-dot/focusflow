@@ -26,6 +26,14 @@ required to take the next useful action.**
   and what's next — not the whole project again.
 - **Bilingual** — the whole UI, plus the agent's own responses, switch between
   English and 中文 from a sidebar selector.
+- **Focus Timer & step splitting** — a live elapsed-time readout during Focus
+  Mode, and a "still too big" action that re-breaks the current step into
+  something smaller without losing progress.
+- **Personalization** — FocusFlow learns your actual-vs-estimated time ratio
+  and how often you split steps further, then uses that to size future
+  breakdowns (see `focusflow/service.py`).
+- **Analytics** — a local dashboard (`pages/1_Analytics.py`) over the metrics
+  in the Evaluation section below.
 
 ### Quickstart
 
@@ -79,6 +87,7 @@ multi-agent system. State persists locally in SQLite (`focusflow/db.py`).
 | Persistence | `focusflow/db.py` |
 | UI strings (EN/中文) | `focusflow/i18n.py` |
 | UI | `app.py` (Streamlit) |
+| Analytics dashboard | `pages/1_Analytics.py` |
 
 ### Agent behaviour rules
 
@@ -99,9 +108,14 @@ multi-agent system. State persists locally in SQLite (`focusflow/db.py`).
   One Next Action.
 - **V0.2** (done): LangGraph workflow, Focus Mode, interruption capture, Later
   list, Resume, SQLite persistence.
-- **V0.3** (future, only after the core loop is validated): calendar/timer
-  integration, long-term preference memory, adaptive task sizing, an
-  analytics dashboard over the metrics below.
+- **V0.3** (partial):
+  - done: a Focus Timer (elapsed time shown live during Focus Mode), a "still
+    too big -- split it" action that re-breaks down the current step without
+    losing progress, long-term preference memory (actual-vs-estimated time
+    ratio + breakdown acceptance rate, stored in SQLite), adaptive task
+    sizing that feeds those preferences back into future breakdowns, and an
+    Analytics page (`pages/1_Analytics.py`) over the metrics below.
+  - not done: calendar integration.
 
 ### Evaluation
 
@@ -149,6 +163,9 @@ interruption handling, resume, task completion).
 - **专注模式（Focus Mode）**——工作过程中突然想到别的事（"我要买洗衣液"），会被记进稍后列表，而不会打断你正在做的事。
 - **恢复（Resume）**——被打断后，只看到你在做什么、完成了什么、下一步是什么——不用重新翻一遍整个项目。
 - **中英双语**——整个界面以及 Agent 的回复内容，都可以在侧边栏里切换中文 / English。
+- **专注计时器 + 步骤再拆分**——专注模式里实时显示已用时间，"还是太大了"按钮可以在不丢失进度的前提下把当前步骤再拆小。
+- **个性化**——FocusFlow 会记录你的实际用时/预估用时比例，以及你把步骤再拆分的频率，用这些数据调整以后拆解任务的粒度（见 `focusflow/service.py`）。
+- **分析看板**——本地的数据看板（`pages/1_Analytics.py`），对应下方"评估指标"里的各项数字。
 
 ### 快速开始
 
@@ -201,6 +218,7 @@ Brain Dump       新任务          Resume           打断
 | 持久化 | `focusflow/db.py` |
 | 界面文案（中/英） | `focusflow/i18n.py` |
 | 界面 | `app.py`（Streamlit） |
+| 分析看板 | `pages/1_Analytics.py` |
 
 ### Agent 行为原则
 
@@ -216,8 +234,12 @@ Brain Dump       新任务          Resume           打断
 
 - **V0.1**（已完成）：Brain Dump → 任务提取 → 拆解 → 排优先级 → 一个下一步动作。
 - **V0.2**（已完成）：LangGraph 工作流、专注模式、打断捕获、稍后列表、恢复、SQLite 持久化。
-- **V0.3**（未来，仅在核心流程被验证有效后再做）：日历/计时器集成、长期偏好记忆、
-  自适应任务拆分、基于下方指标的分析看板。
+- **V0.3**（部分完成）：
+  - 已完成：专注计时器（专注模式中实时显示已用时间）、"还是太大了——再拆一下"
+    （在不丢失进度的情况下重新拆解当前步骤）、长期偏好记忆（实际/预估用时比例、
+    拆解接受率，存在 SQLite 中）、把这些偏好反馈进未来拆解粒度的自适应任务拆分、
+    以及基于下方指标的分析看板（`pages/1_Analytics.py`）。
+  - 未完成：日历集成。
 
 ### 评估指标
 

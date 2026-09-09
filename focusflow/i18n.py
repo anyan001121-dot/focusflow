@@ -106,6 +106,27 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     "completed_header": {"en": "Completed ({n})", "zh": "已完成（{n}）"},
     "done_button": {"en": "✅ Done with this step", "zh": "✅ 这一步完成了"},
+    "split_button": {
+        "en": "Still too big -- split it",
+        "zh": "还是太大了——再拆一下",
+    },
+    "step_split_notice": {
+        "en": "Broke that into something smaller.",
+        "zh": "已经把它拆成更小的一步了。",
+    },
+    "timer_elapsed": {"en": "Elapsed: {mmss}", "zh": "已用时：{mmss}"},
+    "timer_over_estimate": {
+        "en": "Past the ~{minutes} min estimate -- that's normal, keep going or mark done when ready.",
+        "zh": "已经超过约 {minutes} 分钟的预估——很正常，继续做或者做完了就点完成。",
+    },
+    "cognitive_load_prompt": {
+        "en": "How much mental effort did that take?",
+        "zh": "刚才那件事花了你多少心力？",
+    },
+    "cognitive_load_easy": {"en": "😌 Easy", "zh": "😌 轻松"},
+    "cognitive_load_okay": {"en": "😐 Okay", "zh": "😐 还好"},
+    "cognitive_load_hard": {"en": "😣 Hard", "zh": "😣 费劲"},
+    "cognitive_load_thanks": {"en": "Noted, thanks.", "zh": "记下了，谢谢。"},
     "aside_label": {
         "en": "Anything else on your mind right now?",
         "zh": "现在脑子里还有别的事情吗？",
@@ -125,6 +146,32 @@ _STRINGS: dict[str, dict[str, str]] = {
         "zh": "把想到的事情随意写出来，或者直接说一件想马上开始的事。",
     },
     "go_button": {"en": "Go", "zh": "开始"},
+    "analytics_title": {"en": "📊 Analytics", "zh": "📊 分析看板"},
+    "analytics_caption": {
+        "en": "Local, single-user approximations from your own usage -- not a diagnostic tool.",
+        "zh": "基于你自己本地使用数据的粗略统计——不是诊断工具。",
+    },
+    "metric_north_star": {
+        "en": "Successful task starts (7d)",
+        "zh": "近7天成功启动任务次数",
+    },
+    "metric_completion_rate": {"en": "Task completion rate", "zh": "任务完成率"},
+    "metric_abandonment_rate": {"en": "Abandonment rate", "zh": "放弃率"},
+    "metric_acceptance_rate": {
+        "en": "Breakdown acceptance rate",
+        "zh": "拆解接受率",
+    },
+    "metric_estimate_ratio": {
+        "en": "Actual vs. estimated time",
+        "zh": "实际用时 / 预估用时",
+    },
+    "metric_interruptions": {"en": "Interruptions captured", "zh": "捕获的打断次数"},
+    "metric_cognitive_load": {"en": "Avg. cognitive load", "zh": "平均认知负荷"},
+    "section_activity": {"en": "Activity by type", "zh": "各类活动次数"},
+    "no_data_yet": {
+        "en": "Not enough data yet -- use the app a bit more first.",
+        "zh": "数据还不够——先多用一会儿再来看。",
+    },
 }
 
 _URGENCY_LABELS = {

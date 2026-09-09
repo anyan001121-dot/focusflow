@@ -103,6 +103,48 @@ def test_resume_reports_current_state_without_dumping_everything():
     assert result["response"]["next_action"] == "Rewrite the second project bullet."
 
 
+def test_split_step_replaces_current_step_without_losing_queue():
+    graph = build_graph()
+    state = new_state()
+    state["focus_mode"] = True
+    state["current_task"] = "Prep interview"
+    state["current_step"] = "Prepare for an AI Product Manager interview"
+    state["task_queue"] = [
+        {"action": "Later queued step.", "estimated_minutes": 5, "completion_condition": "done"}
+    ]
+    state["user_input"] = "too big"
+    state["intent"] = "split_step"
+
+    result = graph.invoke(state)
+
+    assert result["breakdown_was_split"] is True
+    assert result["response"]["type"] == "step_split"
+    assert result["current_step"] != "Prepare for an AI Product Manager interview"
+    assert result["task_queue"][-1] == {
+        "action": "Later queued step.", "estimated_minutes": 5, "completion_condition": "done"
+    }
+
+
+def test_continue_focus_reports_actual_vs_estimated_minutes():
+    graph = build_graph()
+    state = new_state()
+    state["focus_mode"] = True
+    state["current_task"] = "Prep interview"
+    state["current_step"] = "Open one job description."
+    state["estimated_time"] = 5
+    state["step_start_time"] = "2020-01-01T00:00:00+00:00"
+    state["task_queue"] = []
+    state["user_input"] = "done"
+
+    result = graph.invoke(state)
+
+    resp = result["response"]
+    assert resp["type"] == "task_complete"
+    assert resp["estimated_minutes_for_step"] == 5
+    assert resp["actual_minutes"] > 0
+    assert resp["breakdown_was_split"] is False
+
+
 def test_empty_input_is_clarify_not_a_crash():
     graph = build_graph()
     state = new_state()

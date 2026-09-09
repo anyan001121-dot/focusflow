@@ -6,6 +6,7 @@ Run with: streamlit run app.py
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -29,6 +30,22 @@ lang = state.get("lang", "en")
 def _update(new_state: dict) -> None:
     st.session_state.ff_state = new_state
     st.rerun()
+
+
+@st.fragment(run_every="1s")
+def _focus_timer(step_start_time: str, estimated_minutes: float, lang: str) -> None:
+    """Live-updating elapsed time for the current step, no auto-refresh of the rest of the page."""
+    if not step_start_time:
+        return
+    try:
+        started = datetime.fromisoformat(step_start_time)
+    except ValueError:
+        return
+    elapsed_seconds = max(0, (datetime.now(timezone.utc) - started).total_seconds())
+    mm, ss = divmod(int(elapsed_seconds), 60)
+    st.caption(t(lang, "timer_elapsed", mmss=f"{mm:02d}:{ss:02d}"))
+    if estimated_minutes and elapsed_seconds > estimated_minutes * 60:
+        st.caption(t(lang, "timer_over_estimate", minutes=estimated_minutes))
 
 
 # ---------------------------------------------------------------------------
@@ -135,12 +152,15 @@ if state.get("focus_mode"):
     st.markdown(t(lang, "focus_goal", goal=state.get("current_goal", "")))
     st.success(t(lang, "focus_start_here", step=state.get("current_step", "")))
     st.caption(t(lang, "focus_estimated", minutes=state.get("estimated_time", 5)))
+    _focus_timer(state.get("step_start_time", ""), state.get("estimated_time", 5), lang)
 
     if response.get("type") == "interruption":
         if response.get("captured"):
             st.warning(t(lang, "interruption_captured"))
         else:
             st.caption(t(lang, "interruption_related"))
+    elif response.get("type") == "step_split":
+        st.caption(t(lang, "step_split_notice"))
 
     completed = state.get("completed_steps", [])
     if completed:
@@ -148,8 +168,11 @@ if state.get("focus_mode"):
             for step in completed:
                 st.markdown(f"- ✅ {step}")
 
-    if st.button(t(lang, "done_button"), type="primary"):
+    button_cols = st.columns([1, 1])
+    if button_cols[0].button(t(lang, "done_button"), type="primary"):
         _update(service.mark_step_done(state))
+    if button_cols[1].button(t(lang, "split_button")):
+        _update(service.split_current_step(state))
 
     aside = st.text_input(
         t(lang, "aside_label"),
@@ -169,6 +192,22 @@ elif response.get("type") == "task_complete":
             steps=response.get("steps_count", 0),
         )
     )
+    task_id = response.get("current_task", "")
+    if st.session_state.get("rated_task") == task_id:
+        st.caption(t(lang, "cognitive_load_thanks"))
+    else:
+        st.caption(t(lang, "cognitive_load_prompt"))
+        rating_cols = st.columns(3)
+        ratings = [
+            ("easy", "cognitive_load_easy"),
+            ("okay", "cognitive_load_okay"),
+            ("hard", "cognitive_load_hard"),
+        ]
+        for col, (rating, key) in zip(rating_cols, ratings):
+            if col.button(t(lang, key), key=f"rate-{rating}"):
+                service.record_cognitive_load(rating)
+                st.session_state.rated_task = task_id
+                st.rerun()
 
 else:
     st.divider()
