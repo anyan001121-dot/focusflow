@@ -1,0 +1,6 @@
+streamlit>=1.38
+langgraph>=0.2
+python-dotenv>=1.0
+anthropic>=0.34
+openai>=1.40
+pytest>=8.0
