@@ -22,7 +22,10 @@ chartCategoricalColors = ["#E8607A", "#F2A65A", "#6FCF97", "#6FA8DC", "#C58AC5",
 
 font = "Nunito:https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap"
 headingFont = "'Baloo 2':https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&display=swap"
-baseFontSize = 15
+baseFontSize = 18
+baseFontWeight = 500
+headingFontSizes = ["44px", "32px", "26px", "22px", "19px", "17px"]
+headingFontWeights = [700, 700, 600, 600, 600, 600]
 
 baseRadius = "large"
 buttonRadius = "full"

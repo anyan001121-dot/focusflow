@@ -16,7 +16,7 @@ from focusflow.i18n import LANGUAGES, t, urgency_label
 
 load_dotenv()
 
-st.set_page_config(page_title="FocusFlow", page_icon="assets/logo.svg", layout="centered")
+st.set_page_config(page_title="FocusFlow", page_icon="assets/logo.svg", layout="wide")
 st.logo("assets/logo.svg", size="large")
 
 db.init_db()
@@ -97,127 +97,135 @@ with st.sidebar:
 
 
 # ---------------------------------------------------------------------------
-# Main area
+# Main area -- kept in a wide-but-centered column so the page doesn't feel
+# like a narrow strip lost in empty space on larger screens.
 # ---------------------------------------------------------------------------
 
-_header_icon, _header_title = st.columns([1, 6], vertical_alignment="center")
-with _header_icon:
-    st.image("assets/logo.svg", width=64)
-with _header_title:
-    st.title("FocusFlow")
+_gutter_l, main_col, _gutter_r = st.columns([1, 5, 1])
 
-response = state.get("response", {})
-rtype = response.get("type")
+with main_col:
+    _header_icon, _header_title = st.columns([1, 6], vertical_alignment="center")
+    with _header_icon:
+        st.image("assets/logo.svg", width=80)
+    with _header_title:
+        st.title("FocusFlow")
 
-if rtype == "resume":
-    if response.get("has_active_task"):
-        st.info(t(lang, "resume_welcome"))
-        st.markdown(t(lang, "resume_you_were", task=response["current_task"]))
-        completed = response.get("completed_steps", [])
-        if completed:
-            st.markdown(t(lang, "resume_completed_header"))
-            for step in completed:
-                st.markdown(f"- ✅ {step}")
-        st.markdown(t(lang, "resume_next_action", action=response.get("next_action", "")))
-        st.caption(t(lang, "resume_estimated", minutes=response.get("estimated_time", 5)))
-    else:
-        st.info(t(lang, "resume_nothing"))
+    response = state.get("response", {})
+    rtype = response.get("type")
 
-elif rtype == "clarify":
-    st.info(t(lang, "clarify_message"))
-
-elif rtype == "brain_dump":
-    st.subheader(t(lang, "brain_dump_header"))
-    priorities = response.get("priorities", [])
-    if not priorities:
-        st.caption(t(lang, "brain_dump_empty"))
-    for p in priorities:
-        cols = st.columns([4, 1])
-        cols[0].markdown(
-            f"**{p['task']}**  \n:small[{t(lang, 'urgency_label', urgency=urgency_label(lang, p['urgency']))}]"
-        )
-        if cols[1].button(t(lang, "start_button"), key=f"start-{p['task']}"):
-            _update(service.start_focus(state, p["task"]))
-    later_additions = response.get("later_list_additions", [])
-    if later_additions:
-        st.caption(t(lang, "later_parked", n=len(later_additions)))
-    ideas = response.get("ideas", [])
-    if ideas:
-        with st.expander(t(lang, "ideas_header", n=len(ideas))):
-            for i in ideas:
-                st.markdown(f"- {i['task']}")
-
-# ---------------------------------------------------------------------------
-# Focus mode
-# ---------------------------------------------------------------------------
-
-if state.get("focus_mode"):
-    st.divider()
-    st.subheader(t(lang, "focus_header"))
-    st.markdown(t(lang, "focus_goal", goal=state.get("current_goal", "")))
-    st.success(t(lang, "focus_start_here", step=state.get("current_step", "")))
-    st.caption(t(lang, "focus_estimated", minutes=state.get("estimated_time", 5)))
-    _focus_timer(state.get("step_start_time", ""), state.get("estimated_time", 5), lang)
-
-    if response.get("type") == "interruption":
-        if response.get("captured"):
-            st.warning(t(lang, "interruption_captured"))
+    if rtype == "resume":
+        if response.get("has_active_task"):
+            st.info(t(lang, "resume_welcome"))
+            st.markdown(t(lang, "resume_you_were", task=response["current_task"]))
+            completed = response.get("completed_steps", [])
+            if completed:
+                st.markdown(t(lang, "resume_completed_header"))
+                for step in completed:
+                    st.markdown(f"- ✅ {step}")
+            st.markdown(t(lang, "resume_next_action", action=response.get("next_action", "")))
+            st.caption(t(lang, "resume_estimated", minutes=response.get("estimated_time", 5)))
         else:
-            st.caption(t(lang, "interruption_related"))
-    elif response.get("type") == "step_split":
-        st.caption(t(lang, "step_split_notice"))
+            st.info(t(lang, "resume_nothing"))
 
-    completed = state.get("completed_steps", [])
-    if completed:
-        with st.expander(t(lang, "completed_header", n=len(completed))):
-            for step in completed:
-                st.markdown(f"- ✅ {step}")
+    elif rtype == "clarify":
+        st.info(t(lang, "clarify_message"))
 
-    button_cols = st.columns([1, 1])
-    if button_cols[0].button(t(lang, "done_button"), type="primary"):
-        _update(service.mark_step_done(state))
-    if button_cols[1].button(t(lang, "split_button")):
-        _update(service.split_current_step(state))
+    elif rtype == "brain_dump":
+        st.subheader(t(lang, "brain_dump_header"))
+        priorities = response.get("priorities", [])
+        if not priorities:
+            st.caption(t(lang, "brain_dump_empty"))
+        for p in priorities:
+            with st.container(border=True):
+                st.markdown(
+                    f"**{p['task']}**  \n:small[{t(lang, 'urgency_label', urgency=urgency_label(lang, p['urgency']))}]"
+                )
+                if st.button(t(lang, "start_button"), key=f"start-{p['task']}", use_container_width=True):
+                    _update(service.start_focus(state, p["task"]))
+        later_additions = response.get("later_list_additions", [])
+        if later_additions:
+            st.caption(t(lang, "later_parked", n=len(later_additions)))
+        ideas = response.get("ideas", [])
+        if ideas:
+            with st.expander(t(lang, "ideas_header", n=len(ideas))):
+                for i in ideas:
+                    st.markdown(f"- {i['task']}")
 
-    aside = st.text_input(
-        t(lang, "aside_label"),
-        key="interruption_input",
-        placeholder=t(lang, "aside_placeholder"),
-    )
-    if st.button(t(lang, "send_button")) and aside.strip():
-        _update(service.handle_message(state, aside.strip()))
+    # -----------------------------------------------------------------------
+    # Focus mode
+    # -----------------------------------------------------------------------
 
-elif response.get("type") == "task_complete":
-    st.balloons()
-    st.success(
-        t(
-            lang,
-            "task_complete_message",
-            task=response.get("current_task", ""),
-            steps=response.get("steps_count", 0),
+    if state.get("focus_mode"):
+        st.divider()
+        st.subheader(t(lang, "focus_header"))
+        st.markdown(t(lang, "focus_goal", goal=state.get("current_goal", "")))
+        st.success(t(lang, "focus_start_here", step=state.get("current_step", "")))
+        st.caption(t(lang, "focus_estimated", minutes=state.get("estimated_time", 5)))
+        _focus_timer(state.get("step_start_time", ""), state.get("estimated_time", 5), lang)
+
+        if response.get("type") == "interruption":
+            if response.get("captured"):
+                st.warning(t(lang, "interruption_captured"))
+            else:
+                st.caption(t(lang, "interruption_related"))
+        elif response.get("type") == "step_split":
+            st.caption(t(lang, "step_split_notice"))
+
+        completed = state.get("completed_steps", [])
+        if completed:
+            with st.expander(t(lang, "completed_header", n=len(completed))):
+                for step in completed:
+                    st.markdown(f"- ✅ {step}")
+
+        if st.button(t(lang, "done_button"), type="primary", use_container_width=True):
+            _update(service.mark_step_done(state))
+        if st.button(t(lang, "split_button"), use_container_width=True):
+            _update(service.split_current_step(state))
+
+        aside = st.text_input(
+            t(lang, "aside_label"),
+            key="interruption_input",
+            placeholder=t(lang, "aside_placeholder"),
         )
-    )
-    task_id = response.get("current_task", "")
-    if st.session_state.get("rated_task") == task_id:
-        st.caption(t(lang, "cognitive_load_thanks"))
-    else:
-        st.caption(t(lang, "cognitive_load_prompt"))
-        rating_cols = st.columns(3)
-        ratings = [
-            ("easy", "cognitive_load_easy"),
-            ("okay", "cognitive_load_okay"),
-            ("hard", "cognitive_load_hard"),
-        ]
-        for col, (rating, key) in zip(rating_cols, ratings):
-            if col.button(t(lang, key), key=f"rate-{rating}"):
-                service.record_cognitive_load(rating)
-                st.session_state.rated_task = task_id
-                st.rerun()
+        if st.button(t(lang, "send_button")) and aside.strip():
+            _update(service.handle_message(state, aside.strip()))
 
-else:
-    st.divider()
-    st.subheader(t(lang, "whats_on_mind_header"))
-    st.caption(t(lang, "whats_on_mind_caption"))
-    dump = st.text_area("Brain dump", key="brain_dump_input", label_visibility="collapsed")
-    if st.button(t(lang, "go_button"), type="primary") and dump.strip():
-        _update(service.handle_message(state, dump.strip()))
+    elif response.get("type") == "task_complete":
+        st.balloons()
+        st.success(
+            t(
+                lang,
+                "task_complete_message",
+                task=response.get("current_task", ""),
+                steps=response.get("steps_count", 0),
+            )
+        )
+        task_id = response.get("current_task", "")
+        if st.session_state.get("rated_task") == task_id:
+            st.caption(t(lang, "cognitive_load_thanks"))
+        else:
+            st.caption(t(lang, "cognitive_load_prompt"))
+            rating_cols = st.columns(3)
+            ratings = [
+                ("easy", "cognitive_load_easy"),
+                ("okay", "cognitive_load_okay"),
+                ("hard", "cognitive_load_hard"),
+            ]
+            for col, (rating, key) in zip(rating_cols, ratings):
+                if col.button(t(lang, key), key=f"rate-{rating}", use_container_width=True):
+                    service.record_cognitive_load(rating)
+                    st.session_state.rated_task = task_id
+                    st.rerun()
+
+    else:
+        st.divider()
+        st.subheader(t(lang, "whats_on_mind_header"))
+        st.caption(t(lang, "whats_on_mind_caption"))
+        dump = st.text_area(
+            "Brain dump",
+            key="brain_dump_input",
+            label_visibility="collapsed",
+            height=180,
+        )
+        if st.button(t(lang, "go_button"), type="primary", use_container_width=True) and dump.strip():
+            _update(service.handle_message(state, dump.strip()))
