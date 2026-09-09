@@ -63,11 +63,11 @@ def test_full_click_through_brain_dump_to_split_to_done(tmp_path, monkeypatch):
     ).run()
     assert not at.exception
 
-    go = [b for b in at.get("button") if _label(b) == "Go"][0]
+    go = [b for b in at.get("button") if "Let's go" in _label(b)][0]
     go.click().run()
     assert not at.exception
 
-    start = [b for b in at.get("button") if _label(b) == "Start"][0]
+    start = [b for b in at.get("button") if "Start" in _label(b)][0]
     start.click().run()
     assert not at.exception
     assert any("split it" in _label(b) for b in at.get("button"))

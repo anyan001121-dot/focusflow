@@ -34,6 +34,9 @@ required to take the next useful action.**
   breakdowns (see `focusflow/service.py`).
 - **Analytics** — a local dashboard (`pages/1_Analytics.py`) over the metrics
   in the Evaluation section below.
+- **A warm, cozy look** — a soft cream/coral theme (`.streamlit/config.toml`)
+  and gently playful copy throughout, without tipping into hype or guilt-trip
+  language (see the Agent behaviour rules below).
 
 ### Quickstart
 
@@ -185,6 +188,8 @@ interruption handling, resume, task completion).
 - **专注计时器 + 步骤再拆分**——专注模式里实时显示已用时间，"还是太大了"按钮可以在不丢失进度的前提下把当前步骤再拆小。
 - **个性化**——FocusFlow 会记录你的实际用时/预估用时比例，以及你把步骤再拆分的频率，用这些数据调整以后拆解任务的粒度（见 `focusflow/service.py`）。
 - **分析看板**——本地的数据看板（`pages/1_Analytics.py`），对应下方"评估指标"里的各项数字。
+- **温馨可爱的视觉风格**——奶油色 + 珊瑚色的暖色主题（`.streamlit/config.toml`），
+  文案也带一点俏皮感，但不会变成打鸡血或制造愧疚感的语言（见下方"Agent 行为原则"）。
 
 ### 快速开始
 

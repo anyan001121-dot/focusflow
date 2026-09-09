@@ -4,7 +4,8 @@ __pycache__/
 venv/
 .env
 *.db
-.streamlit/
+.streamlit/credentials.toml
+.streamlit/secrets.toml
 .DS_Store
 .agents/
 .claude/
