@@ -45,6 +45,11 @@ CREATE TABLE IF NOT EXISTS preferences (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     data_json TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS checklist (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    data_json TEXT NOT NULL
+);
 """
 
 _DEFAULT_PREFERENCES = {
@@ -155,6 +160,26 @@ def record_breakdown_outcome(was_split: bool, db_path: str | None = None) -> Non
     if was_split:
         prefs["breakdown_rejections"] += 1
     save_preferences(prefs, db_path)
+
+
+def load_checklist(db_path: str | None = None) -> dict:
+    """Manual "have you done this?" flags for the Setup page. Kept separate
+    from `preferences` and untouched by `delete_all()` -- this is one-time
+    environment setup progress, not personal task data."""
+    with _connect(db_path) as conn:
+        row = conn.execute("SELECT data_json FROM checklist WHERE id = 1").fetchone()
+    if row is None:
+        return {}
+    return json.loads(row[0])
+
+
+def save_checklist(data: dict, db_path: str | None = None) -> None:
+    with _connect(db_path) as conn:
+        conn.execute(
+            """INSERT INTO checklist (id, data_json) VALUES (1, ?)
+               ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json""",
+            (json.dumps(data),),
+        )
 
 
 def delete_all(db_path: str | None = None) -> None:

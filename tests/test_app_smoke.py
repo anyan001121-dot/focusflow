@@ -17,6 +17,7 @@ from focusflow import db
 
 _ROOT = Path(__file__).parent.parent
 _APP = str(_ROOT / "app.py")
+_SETUP_PAGE = str(_ROOT / "pages" / "0_Setup.py")
 _ANALYTICS_PAGE = str(_ROOT / "pages" / "1_Analytics.py")
 
 
@@ -36,6 +37,20 @@ def test_analytics_page_boots_clean_with_no_data(tmp_path, monkeypatch):
     at = AppTest.from_file(_ANALYTICS_PAGE)
     at.run()
     assert not at.exception
+
+
+def test_setup_page_checklist_persists(tmp_path, monkeypatch):
+    monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "setup.db"))
+    at = AppTest.from_file(_SETUP_PAGE)
+    at.run()
+    assert not at.exception
+
+    at.get("checkbox")[0].check().run()
+    assert not at.exception
+
+    at2 = AppTest.from_file(_SETUP_PAGE)
+    at2.run()
+    assert at2.get("checkbox")[0].value is True
 
 
 def test_full_click_through_brain_dump_to_split_to_done(tmp_path, monkeypatch):

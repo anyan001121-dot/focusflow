@@ -50,6 +50,24 @@ LLM (`focusflow/mock_llm.py`) so you can try the whole flow immediately. Add
 `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` to `.env` for real task extraction and
 breakdown quality (see `focusflow/llm.py`).
 
+### Connecting a real LLM
+
+The steps below are independent of each other -- check them off in any
+order once you've done them, there's no required sequence:
+
+- [ ] Get an API key: [Anthropic console](https://console.anthropic.com/settings/keys)
+      or [OpenAI console](https://platform.openai.com/api-keys).
+- [ ] Copy `.env.example` to a new file named `.env` in the project root.
+- [ ] Open `.env` and paste your key after `ANTHROPIC_API_KEY=` or
+      `OPENAI_API_KEY=` (fill in only one; if both are set, Anthropic is used).
+- [ ] Restart the app: stop it and run `streamlit run app.py` again.
+- [ ] Open the app and check the sidebar's "LLM backend" line, or the
+      **Setup** page in the sidebar nav, which shows a live "connected" status.
+
+This same checklist is built into the app itself as a Setup page
+(`pages/0_Setup.py`) with real, persistent checkboxes -- useful for anyone
+who clones this repo and wants a guided first run.
+
 ### Architecture
 
 ```
@@ -87,6 +105,7 @@ multi-agent system. State persists locally in SQLite (`focusflow/db.py`).
 | Persistence | `focusflow/db.py` |
 | UI strings (EN/中文) | `focusflow/i18n.py` |
 | UI | `app.py` (Streamlit) |
+| Setup checklist | `pages/0_Setup.py` |
 | Analytics dashboard | `pages/1_Analytics.py` |
 
 ### Agent behaviour rules
@@ -181,6 +200,22 @@ FocusFlow **不需要任何 API key** 就能跑：没有配置时会自动回退
 （`focusflow/mock_llm.py`），让你可以立刻体验完整流程。想要更好的任务提取/拆解质量，
 可以在 `.env` 里填入 `ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`（见 `focusflow/llm.py`）。
 
+### 接入真实 LLM
+
+下面这些步骤彼此独立，做完了随时打勾，不需要按顺序：
+
+- [ ] 申请一个 API key：[Anthropic 控制台](https://console.anthropic.com/settings/keys)
+      或 [OpenAI 控制台](https://platform.openai.com/api-keys)。
+- [ ] 把项目根目录的 `.env.example` 复制一份，命名为 `.env`。
+- [ ] 打开 `.env`，把你的 key 粘贴到 `ANTHROPIC_API_KEY=` 或 `OPENAI_API_KEY=` 后面
+      （填一个就行；如果两个都填了，优先用 Anthropic）。
+- [ ] 重启应用：停掉后重新运行 `streamlit run app.py`。
+- [ ] 打开应用，看侧边栏的 "LLM backend" 那一行，或者侧边栏导航里的 **Setup** 页面，
+      上面会实时显示是否已经连接成功。
+
+这份 checklist 同时也内置在应用里，作为一个 Setup 页面（`pages/0_Setup.py`），
+勾选状态会真实保存下来——对任何 clone 这个仓库、想要有引导地跑起来的人都有用。
+
 ### 架构
 
 ```
@@ -218,6 +253,7 @@ Brain Dump       新任务          Resume           打断
 | 持久化 | `focusflow/db.py` |
 | 界面文案（中/英） | `focusflow/i18n.py` |
 | 界面 | `app.py`（Streamlit） |
+| 设置 checklist | `pages/0_Setup.py` |
 | 分析看板 | `pages/1_Analytics.py` |
 
 ### Agent 行为原则

@@ -172,6 +172,60 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Not enough data yet -- use the app a bit more first.",
         "zh": "数据还不够——先多用一会儿再来看。",
     },
+    "setup_title": {
+        "en": "⚙️ Setup: connect a real LLM",
+        "zh": "⚙️ 设置：接入真实 LLM",
+    },
+    "setup_intro": {
+        "en": "FocusFlow runs out of the box on a small heuristic \"mock\" backend "
+        "(see focusflow/mock_llm.py) so there's something to try immediately. "
+        "For real task extraction and breakdown quality, connect an Anthropic or "
+        "OpenAI API key.",
+        "zh": "FocusFlow 默认跑在一个小型启发式 \"mock\" 后端上（见 focusflow/mock_llm.py），"
+        "这样你可以立刻上手试用。想要更好的任务提取和拆解质量，需要接入 Anthropic 或 OpenAI 的 API key。",
+    },
+    "setup_order_note": {
+        "en": "Check these off in any order -- nothing here is gated on the step above it.",
+        "zh": "这些可以按任意顺序打勾——不需要按上下顺序来。",
+    },
+    "setup_status_connected": {
+        "en": "✅ Connected: {provider}",
+        "zh": "✅ 已连接：{provider}",
+    },
+    "setup_status_mock": {
+        "en": "Not connected yet -- currently running on the Mock backend.",
+        "zh": "还没连接——目前在用 Mock 模式。",
+    },
+    "step_get_key": {
+        "en": "Get an API key from Anthropic or OpenAI",
+        "zh": "去 Anthropic 或 OpenAI 申请一个 API key",
+    },
+    "step_copy_env": {
+        "en": "In the project folder, copy `.env.example` to a new file named `.env`",
+        "zh": "在项目目录里，把 `.env.example` 复制一份，命名为 `.env`",
+    },
+    "step_paste_key": {
+        "en": "Open `.env` and paste your key after `ANTHROPIC_API_KEY=` or `OPENAI_API_KEY=`",
+        "zh": "打开 `.env`，把你的 key 粘贴到 `ANTHROPIC_API_KEY=` 或 `OPENAI_API_KEY=` 后面",
+    },
+    "step_restart": {
+        "en": "Restart the app (stop it, then run `streamlit run app.py` again)",
+        "zh": "重启应用（停掉后重新运行 `streamlit run app.py`）",
+    },
+    "step_verify": {
+        "en": "Come back to this page and check the status above",
+        "zh": "回到这个页面，看看上面的状态",
+    },
+    "for_others_header": {
+        "en": "For other people running this project",
+        "zh": "给其他运行这个项目的人",
+    },
+    "for_others_body": {
+        "en": "This checklist is also the setup guide for anyone who clones the repo "
+        "-- see also the Quickstart section in README.md.",
+        "zh": "这份 checklist 同时也是给任何 clone 这个仓库的人看的设置指南——也可以参考 "
+        "README.md 里的 Quickstart 部分。",
+    },
 }
 
 _URGENCY_LABELS = {
