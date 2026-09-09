@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- FocusFlow mascot: a soft little sprout buddy, hand-drawn in the app's
+       warm palette. Used as the favicon and header logo instead of an emoji. -->
+
+  <!-- sprout leaves -->
+  <ellipse cx="82" cy="46" rx="11" ry="24" fill="#8FD19E" stroke="#4A3B36" stroke-width="3.5" transform="rotate(-25 82 46)"/>
+  <ellipse cx="118" cy="46" rx="11" ry="24" fill="#8FD19E" stroke="#4A3B36" stroke-width="3.5" transform="rotate(25 118 46)"/>
+  <path d="M100 66 L100 52" stroke="#4A3B36" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- body -->
+  <circle cx="100" cy="118" r="64" fill="#FFE3D1" stroke="#4A3B36" stroke-width="5"/>
+
+  <!-- glossy highlight -->
+  <ellipse cx="76" cy="90" rx="15" ry="9" fill="#FFFFFF" opacity="0.55" transform="rotate(-20 76 90)"/>
+
+  <!-- cheeks -->
+  <circle cx="66" cy="130" r="10" fill="#F7A6A6" opacity="0.85"/>
+  <circle cx="134" cy="130" r="10" fill="#F7A6A6" opacity="0.85"/>
+
+  <!-- eyes -->
+  <circle cx="80" cy="112" r="6" fill="#4A3B36"/>
+  <circle cx="120" cy="112" r="6" fill="#4A3B36"/>
+
+  <!-- smile -->
+  <path d="M85 135 Q100 148 115 135" stroke="#4A3B36" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+</svg>

@@ -16,7 +16,8 @@ from focusflow.i18n import LANGUAGES, t, urgency_label
 
 load_dotenv()
 
-st.set_page_config(page_title="FocusFlow", page_icon="🎯", layout="centered")
+st.set_page_config(page_title="FocusFlow", page_icon="assets/logo.svg", layout="centered")
+st.logo("assets/logo.svg", size="large")
 
 db.init_db()
 
@@ -99,7 +100,11 @@ with st.sidebar:
 # Main area
 # ---------------------------------------------------------------------------
 
-st.title("🎯 FocusFlow")
+_header_icon, _header_title = st.columns([1, 6], vertical_alignment="center")
+with _header_icon:
+    st.image("assets/logo.svg", width=64)
+with _header_title:
+    st.title("FocusFlow")
 
 response = state.get("response", {})
 rtype = response.get("type")
