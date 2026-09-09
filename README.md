@@ -1,6 +1,10 @@
 # FocusFlow
 
-[中文说明](README.zh-CN.md)
+**[English](#english)** · **[中文](#中文)**
+
+---
+
+## English
 
 An AI executive-function assistant for people with ADHD or attention/task-management
 difficulties. **FocusFlow does not diagnose or treat ADHD.** It exists to close the
@@ -10,7 +14,7 @@ doing it."*
 Design principle: **do not maximize information — minimize the cognitive effort
 required to take the next useful action.**
 
-## What it does
+### What it does
 
 - **Brain Dump** — turn messy, unstructured thoughts into at most three clear
   priorities, without dumping a huge list back at you.
@@ -23,7 +27,7 @@ required to take the next useful action.**
 - **Bilingual** — the whole UI, plus the agent's own responses, switch between
   English and 中文 from a sidebar selector.
 
-## Quickstart
+### Quickstart
 
 ```bash
 python3 -m venv .venv
@@ -38,7 +42,7 @@ LLM (`focusflow/mock_llm.py`) so you can try the whole flow immediately. Add
 `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` to `.env` for real task extraction and
 breakdown quality (see `focusflow/llm.py`).
 
-## Architecture
+### Architecture
 
 ```
 User Input
@@ -76,7 +80,7 @@ multi-agent system. State persists locally in SQLite (`focusflow/db.py`).
 | UI strings (EN/中文) | `focusflow/i18n.py` |
 | UI | `app.py` (Streamlit) |
 
-## Agent behaviour rules
+### Agent behaviour rules
 
 1. Never overwhelm the user with unnecessary information; show at most three
    immediate priorities by default.
@@ -89,7 +93,7 @@ multi-agent system. State persists locally in SQLite (`focusflow/db.py`).
    reconstruct on resume.
 7. No guilt, shame, or excessive motivational language. No medical claims.
 
-## Roadmap
+### Roadmap
 
 - **V0.1** (done): Brain Dump -> Task Extraction -> Breakdown -> Prioritization ->
   One Next Action.
@@ -99,7 +103,7 @@ multi-agent system. State persists locally in SQLite (`focusflow/db.py`).
   integration, long-term preference memory, adaptive task sizing, an
   analytics dashboard over the metrics below.
 
-## Evaluation
+### Evaluation
 
 Product quality should be judged on usage outcomes, not on whether responses
 "sound good." FocusFlow logs each turn to a local `events` table
@@ -110,7 +114,7 @@ Product quality should be judged on usage outcomes, not on whether responses
 - Cognitive Load (self-reported)
 - North Star: **Successful Task Starts per User per Week**
 
-## Privacy & safety
+### Privacy & safety
 
 - Not a medical device: no ADHD diagnosis, no medication advice, no
   replacement for professional care.
@@ -119,7 +123,7 @@ Product quality should be judged on usage outcomes, not on whether responses
 - Use the "Delete all my data" button in the app (or `service.reset_all()`)
   to wipe stored state and event history at any time.
 
-## Tests
+### Tests
 
 ```bash
 pytest
@@ -128,3 +132,115 @@ pytest
 Graph tests run entirely against the mock LLM backend, so no API key is
 needed to verify the core control flow (brain dump prioritization,
 interruption handling, resume, task completion).
+
+---
+
+## 中文
+
+一个面向 ADHD / 执行功能困难人群的 AI 执行功能助手。**FocusFlow 不诊断、也不治疗 ADHD**，它的目标是缩小
+「我知道要做什么」和「我真的能开始并持续做下去」之间的差距。
+
+设计原则：**不追求信息最大化，而是把"采取下一步有用行动"所需的认知负担降到最低。**
+
+### 它能做什么
+
+- **Brain Dump（一键倾倒）**——把杂乱无章的想法整理成最多三个清晰的优先事项，而不是甩给你一份更长的清单。
+- **任务拆解**——把模糊的目标（"准备一场面试"）拆成一个几分钟内就能开始的具体第一步。
+- **专注模式（Focus Mode）**——工作过程中突然想到别的事（"我要买洗衣液"），会被记进稍后列表，而不会打断你正在做的事。
+- **恢复（Resume）**——被打断后，只看到你在做什么、完成了什么、下一步是什么——不用重新翻一遍整个项目。
+- **中英双语**——整个界面以及 Agent 的回复内容，都可以在侧边栏里切换中文 / English。
+
+### 快速开始
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # 可选，见下文
+streamlit run app.py
+```
+
+FocusFlow **不需要任何 API key** 就能跑：没有配置时会自动回退到一个小型启发式 "mock" LLM
+（`focusflow/mock_llm.py`），让你可以立刻体验完整流程。想要更好的任务提取/拆解质量，
+可以在 `.env` 里填入 `ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`（见 `focusflow/llm.py`）。
+
+### 架构
+
+```
+用户输入
+    |
+意图路由 Intent Router
+    |
+    +---------------+---------------+----------------+
+    |               |               |                |
+Brain Dump       新任务          Resume           打断
+    |               |               |                |
+整理            拆解           加载状态          捕获
+    |               |               |                |
+排优先级        下一步动作       恢复要点          稍后列表
+    +---------------+---------------+----------------+
+                     |
+                专注模式 Focus Mode
+                     |
+                任务状态（SQLite）
+                     |
+               用户进度
+```
+
+用 [LangGraph](https://github.com/langchain-ai/langgraph) 实现为一个小而受控的状态机
+（`focusflow/graph.py`）——而不是一个漫无边际的多智能体系统。状态本地持久化在 SQLite
+（`focusflow/db.py`）中。
+
+| 层 | 文件 |
+|---|---|
+| 共享状态结构 | `focusflow/state.py` |
+| 路由 + 节点（LangGraph） | `focusflow/graph.py` |
+| 数据库 + 图编排 | `focusflow/service.py` |
+| LLM provider 封装 | `focusflow/llm.py`, `focusflow/mock_llm.py` |
+| 提示词 | `focusflow/prompts.py` |
+| 持久化 | `focusflow/db.py` |
+| 界面文案（中/英） | `focusflow/i18n.py` |
+| 界面 | `app.py`（Streamlit） |
+
+### Agent 行为原则
+
+1. 绝不用不必要的信息淹没用户；默认最多展示三个当前优先事项。
+2. 始终指出一个明确的首要下一步动作。
+3. 把模糊的目标转化为可观察、具体的动作。
+4. 优先选择约 2-5 分钟内就能开始的第一步。
+5. 专注模式期间，不会因为用户提到别的事就放弃当前任务——而是记进稍后列表。
+6. 在打断之间保留任务状态；让用户在恢复时需要重建的上下文最少。
+7. 不使用愧疚、羞耻或过度的激励式语言，不做任何医疗相关的宣称。
+
+### 路线图
+
+- **V0.1**（已完成）：Brain Dump → 任务提取 → 拆解 → 排优先级 → 一个下一步动作。
+- **V0.2**（已完成）：LangGraph 工作流、专注模式、打断捕获、稍后列表、恢复、SQLite 持久化。
+- **V0.3**（未来，仅在核心流程被验证有效后再做）：日历/计时器集成、长期偏好记忆、
+  自适应任务拆分、基于下方指标的分析看板。
+
+### 评估指标
+
+产品质量应该基于实际使用效果来判断，而不是"回复听起来好不好"。FocusFlow 会把每一轮交互
+记录到本地的 `events` 表（`focusflow/db.py`），为将来支持以下指标做准备：
+
+- 任务启动率（Task Start Rate）、启动耗时（Time-to-Start）、任务完成率（Task Completion Rate）
+- 拆解采纳率（Breakdown Acceptance Rate）、恢复成功率（Resume Success Rate）、放弃率（Abandonment Rate）
+- 认知负荷（用户自评）
+- 北极星指标：**每位用户每周成功启动任务的次数（Successful Task Starts per User per Week）**
+
+### 隐私与安全
+
+- 不是医疗设备：不做 ADHD 诊断、不提供用药建议、不能替代专业医疗意见。
+- 所有数据都保存在本地单个 SQLite 文件中（默认 `focusflow.db`，已加入 `.gitignore`）。
+- 随时可以点击应用内的"删除我的所有数据"按钮（或调用 `service.reset_all()`）
+  清空已存储的状态和事件历史。
+
+### 测试
+
+```bash
+pytest
+```
+
+图（graph）测试完全基于 mock LLM 后端运行，因此不需要任何 API key 就能验证核心控制流程
+（brain dump 优先级排序、打断处理、恢复、任务完成）。
