@@ -2,7 +2,7 @@
   <img src="assets/logo.svg" width="96" alt="FocusFlow mascot" />
 </p>
 <h1 align="center">FocusFlow</h1>
-<p align="center"><em>An AI executive-function assistant for ADHD-style task-initiation friction — a small, deliberately non-autonomous LangGraph workflow, not a chatbot with a to-do list bolted on.</em></p>
+<p align="center"><em>FocusFlow optimizes for starting, not planning — an externalized executive-function layer for ADHD-style task-initiation friction, built as a small, deliberately bounded agent rather than a chatbot with a to-do list bolted on.</em></p>
 
 <p align="center">
   <a href="https://github.com/anyan001121-dot/focusflow/actions/workflows/tests.yml"><img src="https://github.com/anyan001121-dot/focusflow/actions/workflows/tests.yml/badge.svg" alt="tests"></a>
@@ -22,7 +22,7 @@
 
 ### tl;dr
 
-- FocusFlow closes the gap between *"I know what I need to do"* and *"I can actually start."* It is not a to-do app and not a medical device.
+- FocusFlow closes the gap between *"I know what I need to do"* and *"I can actually start"* — it optimizes for starting, not planning. It is not a to-do app and not a medical device.
 - Messy thoughts in → at most 3 priorities out. A vague goal in → one concrete step you can start in 2-5 minutes. Get distracted mid-task → the new thought is parked, not adopted, and you're handed straight back to what you were doing.
 - Try it in under a minute, no API key required:
   ```bash
@@ -33,16 +33,16 @@
 
 ### The problem
 
-Most task-initiation friction isn't a planning problem, it's a *first-step* problem. Someone with ADHD (or just an overloaded week) usually knows the shape of what needs doing — the blocker is that "prepare for an interview" doesn't have an obvious verb attached to it, and a wall of unsorted thoughts is itself exhausting to look at.
+Most task-initiation friction isn't a planning problem, it's a *first-step* problem. Someone with ADHD (or just an overloaded week) usually knows the shape of what needs doing — the blocker is that "prepare for an interview" doesn't have an obvious verb attached to it, and a wall of unsorted thoughts is itself exhausting to look at. This friction also isn't only about starting: it shows up as ongoing executive-function load — holding a task's context in working memory, resisting whatever new thing just grabbed attention, and remembering to come back to something later.
 
-Generic to-do apps make this worse: they reward capturing more, not starting sooner. FocusFlow is built around one constraint instead: **don't maximize information — minimize the cognitive effort required to take the next useful action.** Concretely, it targets four failure modes:
+Generic to-do apps make this worse: they reward capturing more, not starting sooner. FocusFlow is built around one constraint instead: **don't maximize information — minimize the cognitive effort required to take the next useful action.** In effect, it works as an externalized executive-function layer — the app holds the context, the plan, and the running clock so the user doesn't have to. Concretely:
 
-| Failure mode | What FocusFlow does about it |
-|---|---|
-| Cognitive overload from unsorted thoughts | Brain Dump caps output at 3 priorities, parks the rest |
-| Abstract goals never get started | Breakdown always returns one 2-5 min first step, never a plan |
-| A new thought derails the current task | Focus Mode parks it in a Later list instead of switching tasks |
-| Coming back after an interruption is disorienting | Resume shows only done / current / next — not the whole project |
+| What makes this hard | How FocusFlow responds | What that buys you |
+|---|---|---|
+| Starting is the hard part, not planning | Breakdown always returns one 2-5 min next action, never a plan | A lower activation barrier to actually begin |
+| Holding a task's context in working memory | Persistent state — current goal, step, and progress | Nothing to keep re-loading into your head |
+| A new thought hijacking the current task | A focus guarantee enforced in code, plus a Later list | The new idea gets filed, not adopted (see [Design decisions](#design-decisions) #1) |
+| Remembering to act on something later, and losing track of time | Later list resurfacing + a live elapsed-time readout | "Remember this" and "how long has this taken" live outside your head, not in it |
 
 ### What it does
 
@@ -54,7 +54,7 @@ Generic to-do apps make this worse: they reward capturing more, not starting soo
 
 <img src="docs/screenshots/03_focus_mode.png" width="720" alt="Focus Mode screen showing the current goal, the first step, and a timer">
 
-**Interruption capture** — a new thought mid-task gets filed to Later without touching the active step.
+**Interruption capture** — a new thought mid-task gets filed to Later without touching the active step. Less a distraction bin, more a lightweight prospective-memory system: a place things you need to remember for later can live outside your own head until it's actually later.
 
 <img src="docs/screenshots/04_interruption_captured.png" width="720" alt="Focus Mode screen after an interruption was captured to the Later list">
 
@@ -66,7 +66,7 @@ Generic to-do apps make this worse: they reward capturing more, not starting soo
 
 A few design choices that shape how this actually feels to use:
 
-**1. It can reason about an interruption, but it can't argue its way into abandoning your task.** When you say something new mid-task, FocusFlow doesn't just run a rigid script — the model actually looks at what you're doing and what you just said, and picks between a few responses, including, if it genuinely thinks your new message is more urgent, proposing to drop your current task and switch. That proposal always has to clear a separate check (`focusflow/policy.py`) first, and while you're in Focus Mode, "switch tasks" simply isn't on the list of things it's allowed to do — no matter how it argues for it. There's a test ([`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py)) that forces the model to insist on switching anyway, just to make sure the answer holds. So you get real judgment on the small stuff, with a hard floor under the one promise that actually matters: it won't abandon what you're doing.
+**1. It can reason about an interruption, but it can't argue its way into abandoning your task.** When you say something new mid-task, FocusFlow doesn't just run a rigid script — the model actually looks at what you're doing and what you just said, and picks between a few responses, including, if it genuinely thinks your new message is more urgent, proposing to drop your current task and switch. That proposal always has to clear a separate check (`focusflow/policy.py`) first, and while you're in Focus Mode, "switch tasks" simply isn't on the list of things it's allowed to do — no matter how it argues for it. There's a test ([`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py)) that forces the model to insist on switching anyway, just to make sure the answer holds. So you get real judgment on the small stuff, with a hard floor under the one promise that actually matters: it won't abandon what you're doing. The underlying pattern has a name — risk-calibrated or bounded agency: low-risk assistance can run autonomously, but a high-impact state change like abandoning a task stays deterministic.
 
 **2. The numbers it shows you aren't an afterthought.** From the first version, every turn you take has been logged, and FocusFlow has been quietly checking whether its time estimates match how long things actually took you, and whether you end up accepting or asking to re-split the steps it suggests. That's what's behind the Analytics page you can open yourself — see [Evaluation](#evaluation) below.
 
@@ -216,7 +216,7 @@ Without it, every visitor to a shared deployment reads and writes the same local
 
 ### 一句话版
 
-- FocusFlow 想缩小"我知道要做什么"和"我真的能开始做"之间的差距。它不是待办事项应用，也不是医疗设备。
+- FocusFlow 想缩小"我知道要做什么"和"我真的能开始做"之间的差距——它优化的是"开始"，不是"规划"。它不是待办事项应用，也不是医疗设备。
 - 杂乱的想法丢进去 → 最多给你 3 个优先事项。模糊的目标丢进去 → 给你一个 2-5 分钟就能开始的具体动作。做到一半分心了 → 新想法被记下来，不会取代你正在做的事，随时能被原样接回去。
 - 一分钟内跑起来，不需要任何 API key：
   ```bash
@@ -227,16 +227,16 @@ Without it, every visitor to a shared deployment reads and writes the same local
 
 ### 要解决的问题
 
-大部分"启动困难"其实不是规划问题，而是"第一步"问题。ADHD（或者只是这周太满）的人通常知道大概要做什么——卡住的地方是"准备面试"这四个字没有一个明确的动词，而一堆没整理的想法本身看着就很累。
+大部分"启动困难"其实不是规划问题，而是"第一步"问题。ADHD（或者只是这周太满）的人通常知道大概要做什么——卡住的地方是"准备面试"这四个字没有一个明确的动词，而一堆没整理的想法本身看着就很累。这种摩擦也不只发生在"开始"那一刻：它会持续表现为执行功能上的负担——要在工作记忆里一直记着任务的上下文、要抵抗刚刚抓住注意力的新东西、还要记得以后回来做某件事。
 
-普通的待办事项应用只会让这更糟：它们奖励"记录更多"，而不是"更快开始"。FocusFlow 的设计只围绕一个约束：**不追求信息最大化，而是把"采取下一步有用行动"所需的认知负担降到最低。** 具体针对四类失败场景：
+普通的待办事项应用只会让这更糟：它们奖励"记录更多"，而不是"更快开始"。FocusFlow 的设计只围绕一个约束：**不追求信息最大化，而是把"采取下一步有用行动"所需的认知负担降到最低。** 换句话说，它更像一层外置的执行功能——上下文、计划、计时都由 App 帮你记着，你不用自己一直扛着。具体来说：
 
-| 失败场景 | FocusFlow 的应对 |
-|---|---|
-| 一堆没整理的想法带来认知过载 | Brain Dump 最多输出 3 个优先事项，其余悄悄放进稍后列表 |
-| 抽象目标永远无法开始 | 拆解永远给一个 2-5 分钟的第一步，不给完整计划 |
-| 新想法打断当前任务 | 专注模式把它记进稍后列表，而不是切换任务 |
-| 打断后回来无所适从 | 恢复功能只展示"完成/当前/下一步"，不是整个项目 |
+| 难在哪里 | FocusFlow 怎么应对 | 你能拿到什么 |
+|---|---|---|
+| 难的是开始，不是规划 | 拆解永远只给一个 2-5 分钟的下一步动作，不给完整计划 | 开始这件事的门槛被降低了 |
+| 要在工作记忆里记住任务的上下文 | 持久化状态——当前目标、步骤、进度都存着 | 不用反复把计划重新装进脑子里 |
+| 新想法把当前任务顶替掉 | 代码写死的专注保证 + 稍后列表 | 新想法被记下来，而不是被采纳（见"设计决策"第1条） |
+| 记得以后要做某件事、还容易忘了时间 | 稍后列表 + 实时的已用时间显示 | "记得这件事"和"用了多久"都放在脑子外面，不用自己扛 |
 
 ### 它能做什么
 
@@ -248,7 +248,7 @@ Without it, every visitor to a shared deployment reads and writes the same local
 
 <img src="docs/screenshots/03_focus_mode.png" width="720" alt="专注模式界面，显示当前目标、第一步和计时器">
 
-**打断捕获**——任务进行中冒出的新想法会被记进稍后列表，不会碰到正在进行的步骤。
+**打断捕获**——任务进行中冒出的新想法会被记进稍后列表，不会碰到正在进行的步骤。与其说是个"分心垃圾桶"，不如说是一个轻量级的 prospective memory（前瞻记忆）系统：那些"以后要记得做"的事情，可以先放在你脑子外面，等真正"以后"到了再说。
 
 <img src="docs/screenshots/04_interruption_captured.png" width="720" alt="专注模式界面，显示一次打断被记录进稍后列表之后的状态">
 
@@ -260,7 +260,7 @@ Without it, every visitor to a shared deployment reads and writes the same local
 
 几个直接影响使用体验的设计：
 
-**1. 它能对打断做出真正的判断，但没法说服自己放弃你的任务。** 你在做任务的时候突然说了点别的，FocusFlow 不是照着死板的脚本走——模型是真的会看你在做什么、你刚说了什么，然后从几个反应里选一个，如果它觉得你说的事真的更紧急，甚至会提议放下手头的任务切换过去。但这个提议永远要先过一道关卡（`focusflow/policy.py`），只要你还在专注模式里，"切换任务"压根不在它能选的范围内——不管它怎么找理由都没用。仓库里有个测试（[`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py)）专门逼着模型坚持要切换，就是为了确认这条底线不会松动。所以你拿到的是：小事上它真的会判断，但唯一那条最重要的承诺——不会把你正在做的事丢下——焊死了。
+**1. 它能对打断做出真正的判断，但没法说服自己放弃你的任务。** 你在做任务的时候突然说了点别的，FocusFlow 不是照着死板的脚本走——模型是真的会看你在做什么、你刚说了什么，然后从几个反应里选一个，如果它觉得你说的事真的更紧急，甚至会提议放下手头的任务切换过去。但这个提议永远要先过一道关卡（`focusflow/policy.py`），只要你还在专注模式里，"切换任务"压根不在它能选的范围内——不管它怎么找理由都没用。仓库里有个测试（[`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py)）专门逼着模型坚持要切换，就是为了确认这条底线不会松动。所以你拿到的是：小事上它真的会判断，但唯一那条最重要的承诺——不会把你正在做的事丢下——焊死了。这种设计模式有个名字——risk-calibrated（风险分级）或者 bounded agency（有边界的自主性）：低风险的辅助可以自主运行，但像"放弃任务"这种高影响的状态变化必须保持确定性。
 
 **2. 你看到的那些数字不是事后补的。** 从第一版起，你的每一轮操作都会被记下来，FocusFlow 一直在悄悄检查它给的时间预估跟你实际花的时间对不对得上、你有没有接受它拆出来的步骤（还是要求再拆一次）。这些就是你自己能打开的 Analytics 页面背后的数据来源——详见下面的"评估指标"。
 
