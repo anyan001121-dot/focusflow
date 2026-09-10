@@ -6,6 +6,7 @@ Run with: streamlit run app.py
 from __future__ import annotations
 
 import os
+import uuid
 from datetime import datetime, timezone
 
 import streamlit as st
@@ -21,8 +22,13 @@ st.logo("assets/logo.svg", size="large")
 
 db.init_db()
 
+# Only matters when FOCUSFLOW_MULTI_SESSION=true (e.g. a public demo
+# deployment) -- see focusflow/db.py. Ignored for local personal use, so
+# this never affects the single-profile persistence Resume relies on.
+session_id = st.session_state.setdefault("session_id", str(uuid.uuid4()))
+
 if "ff_state" not in st.session_state:
-    st.session_state.ff_state = service.load_or_new_state()
+    st.session_state.ff_state = service.load_or_new_state(session_id)
 
 state = st.session_state.ff_state
 lang = state.get("lang", "en")
@@ -65,7 +71,7 @@ with st.sidebar:
         format_func=lambda code: LANGUAGES[code],
     )
     if chosen != lang:
-        _update(service.set_language(state, chosen))
+        _update(service.set_language(state, chosen, session_id))
 
     if os.environ.get("ANTHROPIC_API_KEY"):
         provider = t(lang, "provider_anthropic")
@@ -88,12 +94,12 @@ with st.sidebar:
     st.divider()
 
     if st.button(t(lang, "resume_button"), use_container_width=True):
-        _update(service.resume(state))
+        _update(service.resume(state, session_id))
 
     with st.expander(t(lang, "privacy_header")):
         st.caption(t(lang, "privacy_caption"))
         if st.button(t(lang, "delete_button"), type="secondary", use_container_width=True):
-            _update(service.reset_all())
+            _update(service.reset_all(session_id))
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +147,7 @@ with main_col:
                     f"**{p['task']}**  \n:small[{t(lang, 'urgency_label', urgency=urgency_label(lang, p['urgency']))}]"
                 )
                 if st.button(t(lang, "start_button"), key=f"start-{p['task']}", use_container_width=True):
-                    _update(service.start_focus(state, p["task"]))
+                    _update(service.start_focus(state, p["task"], session_id))
         later_additions = response.get("later_list_additions", [])
         if later_additions:
             st.caption(t(lang, "later_parked", n=len(later_additions)))
@@ -178,9 +184,9 @@ with main_col:
                     st.markdown(f"- ✅ {step}")
 
         if st.button(t(lang, "done_button"), type="primary", use_container_width=True):
-            _update(service.mark_step_done(state))
+            _update(service.mark_step_done(state, session_id))
         if st.button(t(lang, "split_button"), use_container_width=True):
-            _update(service.split_current_step(state))
+            _update(service.split_current_step(state, session_id))
 
         aside = st.text_input(
             t(lang, "aside_label"),
@@ -188,7 +194,7 @@ with main_col:
             placeholder=t(lang, "aside_placeholder"),
         )
         if st.button(t(lang, "send_button")) and aside.strip():
-            _update(service.handle_message(state, aside.strip()))
+            _update(service.handle_message(state, aside.strip(), session_id))
 
     elif response.get("type") == "task_complete":
         st.balloons()
@@ -213,7 +219,7 @@ with main_col:
             ]
             for col, (rating, key) in zip(rating_cols, ratings):
                 if col.button(t(lang, key), key=f"rate-{rating}", use_container_width=True):
-                    service.record_cognitive_load(rating)
+                    service.record_cognitive_load(rating, session_id)
                     st.session_state.rated_task = task_id
                     st.rerun()
 
@@ -228,4 +234,4 @@ with main_col:
             height=180,
         )
         if st.button(t(lang, "go_button"), type="primary", use_container_width=True) and dump.strip():
-            _update(service.handle_message(state, dump.strip()))
+            _update(service.handle_message(state, dump.strip(), session_id))

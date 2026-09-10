@@ -11,6 +11,17 @@ app is fully runnable (with lower-quality output) before any key is added.
 
 All three paths return a parsed JSON-compatible Python object matching the
 caller-supplied schema description, so callers never branch on provider.
+
+Fault tolerance: a real API call gets a bounded timeout and a few
+SDK-managed retries (both vendor SDKs already implement exponential
+backoff for transient errors -- no need to reinvent that). If the call
+still fails after retries, or the model returns text `_extract_json` can't
+parse, FocusFlow logs a warning and **falls back to the same heuristic
+mock output a missing API key would produce** rather than crashing the
+page with a traceback. For an ADHD-focused product this is a deliberate
+choice, not a shortcut: a degraded-but-calm suggestion beats an error
+screen, and it's the same reason a public demo instance doesn't go down
+just because it hit a rate limit.
 """
 
 from __future__ import annotations
@@ -18,9 +29,13 @@ from __future__ import annotations
 import json
 import os
 import re
+import warnings
 from typing import Any
 
 from . import mock_llm
+
+_TIMEOUT_SECONDS = 20.0
+_MAX_RETRIES = 2
 
 
 class LLMError(RuntimeError):
@@ -53,6 +68,16 @@ def active_provider() -> str:
     return "mock"
 
 
+def _fall_back_to_mock(provider: str, task: str, user: str, lang: str, ratio, exc: Exception) -> Any:
+    warnings.warn(
+        f"FocusFlow: {provider} call failed ({exc.__class__.__name__}: {exc}); "
+        "falling back to practice-mode output for this turn.",
+        RuntimeWarning,
+        stacklevel=3,
+    )
+    return mock_llm.run(task, user, lang=lang, ratio=ratio)
+
+
 def complete_json(
     system: str, user: str, *, task: str, lang: str = "en", ratio: float | None = None
 ) -> Any:
@@ -71,16 +96,22 @@ def complete_json(
     """
     provider = active_provider()
     if provider == "anthropic":
-        return _extract_json(_call_anthropic(system, user))
+        try:
+            return _extract_json(_call_anthropic(system, user))
+        except Exception as exc:  # noqa: BLE001 -- deliberate: see module docstring
+            return _fall_back_to_mock(provider, task, user, lang, ratio, exc)
     if provider == "openai":
-        return _extract_json(_call_openai(system, user))
+        try:
+            return _extract_json(_call_openai(system, user))
+        except Exception as exc:  # noqa: BLE001 -- deliberate: see module docstring
+            return _fall_back_to_mock(provider, task, user, lang, ratio, exc)
     return mock_llm.run(task, user, lang=lang, ratio=ratio)
 
 
 def _call_anthropic(system: str, user: str) -> str:
     import anthropic
 
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(timeout=_TIMEOUT_SECONDS, max_retries=_MAX_RETRIES)
     model = os.environ.get("FOCUSFLOW_ANTHROPIC_MODEL", "claude-sonnet-5")
     resp = client.messages.create(
         model=model,
@@ -94,7 +125,7 @@ def _call_anthropic(system: str, user: str) -> str:
 def _call_openai(system: str, user: str) -> str:
     from openai import OpenAI
 
-    client = OpenAI()
+    client = OpenAI(timeout=_TIMEOUT_SECONDS, max_retries=_MAX_RETRIES)
     model = os.environ.get("FOCUSFLOW_OPENAI_MODEL", "gpt-4o-mini")
     resp = client.chat.completions.create(
         model=model,

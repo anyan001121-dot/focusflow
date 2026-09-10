@@ -10,6 +10,7 @@ is computed live from the environment, not a checkbox.
 from __future__ import annotations
 
 import os
+import uuid
 
 import streamlit as st
 
@@ -20,7 +21,10 @@ st.set_page_config(page_title="FocusFlow -- Setup", page_icon="⚙️", layout="
 
 db.init_db()
 
-state = st.session_state.get("ff_state") or service.load_or_new_state()
+# See app.py: only matters in FOCUSFLOW_MULTI_SESSION mode (public demo).
+session_id = st.session_state.setdefault("session_id", str(uuid.uuid4()))
+
+state = st.session_state.get("ff_state") or service.load_or_new_state(session_id)
 lang = state.get("lang", "en")
 
 st.title(t(lang, "setup_title"))
@@ -36,7 +40,7 @@ else:
 st.divider()
 st.caption(t(lang, "setup_order_note"))
 
-checklist = db.load_checklist()
+checklist = db.load_checklist(session_id=session_id)
 
 _STEPS = [
     ("get_key", "step_get_key"),
@@ -50,7 +54,7 @@ for step_id, label_key in _STEPS:
     checked = st.checkbox(t(lang, label_key), value=checklist.get(step_id, False), key=f"chk_{step_id}")
     if checked != checklist.get(step_id, False):
         checklist[step_id] = checked
-        db.save_checklist(checklist)
+        db.save_checklist(checklist, session_id=session_id)
 
 st.markdown(
     "[Anthropic console](https://console.anthropic.com/settings/keys) · "

@@ -8,6 +8,10 @@ raw signals (actual vs. estimated minutes, whether a breakdown got split),
 and this layer is what turns those into the aggregate stats in
 focusflow/db.py's preferences table and feeds them back in as the next
 breakdown's personalization hint.
+
+Every function takes an optional `session_id`. It's ignored unless
+`FOCUSFLOW_MULTI_SESSION=true` (see focusflow/db.py) -- local personal use
+never needs to pass it.
 """
 
 from __future__ import annotations
@@ -30,8 +34,8 @@ def _get_graph():
     return _graph
 
 
-def load_or_new_state() -> FocusFlowState:
-    saved = db.load_state()
+def load_or_new_state(session_id: str | None = None) -> FocusFlowState:
+    saved = db.load_state(session_id=session_id)
     if saved is not None:
         return saved
     return new_state()
@@ -70,8 +74,13 @@ def _personalization_hint(prefs: dict) -> str:
     return " ".join(parts)
 
 
-def _run(state: FocusFlowState, user_input: str, intent: str | None = None) -> FocusFlowState:
-    prefs = db.load_preferences()
+def _run(
+    state: FocusFlowState,
+    user_input: str,
+    intent: str | None = None,
+    session_id: str | None = None,
+) -> FocusFlowState:
+    prefs = db.load_preferences(session_id=session_id)
 
     state = dict(state)
     state["user_input"] = user_input
@@ -80,58 +89,67 @@ def _run(state: FocusFlowState, user_input: str, intent: str | None = None) -> F
     state["estimate_ratio"] = _estimate_ratio(prefs) or 0.0
 
     result = _get_graph().invoke(state)
-    db.save_state(result)
+    db.save_state(result, session_id=session_id)
 
     response = result.get("response", {})
     actual = response.get("actual_minutes")
     estimated = response.get("estimated_minutes_for_step")
     if actual is not None and estimated:
-        db.record_step_duration(actual, estimated)
+        db.record_step_duration(actual, estimated, session_id=session_id)
     if response.get("type") == "task_complete":
-        db.record_breakdown_outcome(response.get("breakdown_was_split", False))
+        db.record_breakdown_outcome(
+            response.get("breakdown_was_split", False), session_id=session_id
+        )
 
     db.log_event(
         result.get("intent", ""),
         {"user_input": user_input, "response": response},
+        session_id=session_id,
     )
     return result
 
 
-def handle_message(state: FocusFlowState, user_input: str) -> FocusFlowState:
+def handle_message(
+    state: FocusFlowState, user_input: str, session_id: str | None = None
+) -> FocusFlowState:
     """Free-text turn: router classifies intent from the text and focus_mode."""
-    return _run(state, user_input)
+    return _run(state, user_input, session_id=session_id)
 
 
-def start_focus(state: FocusFlowState, goal: str) -> FocusFlowState:
+def start_focus(
+    state: FocusFlowState, goal: str, session_id: str | None = None
+) -> FocusFlowState:
     """UI shortcut: user picked a goal to start now (e.g. from Brain Dump priorities)."""
-    return _run(state, goal, intent="new_task")
+    return _run(state, goal, intent="new_task", session_id=session_id)
 
 
-def mark_step_done(state: FocusFlowState) -> FocusFlowState:
-    return _run(state, "done", intent="continue_focus")
+def mark_step_done(state: FocusFlowState, session_id: str | None = None) -> FocusFlowState:
+    return _run(state, "done", intent="continue_focus", session_id=session_id)
 
 
-def split_current_step(state: FocusFlowState) -> FocusFlowState:
+def split_current_step(state: FocusFlowState, session_id: str | None = None) -> FocusFlowState:
     """UI shortcut: "this step is still too big" -- ask for a smaller one."""
-    return _run(state, state.get("current_step", ""), intent="split_step")
+    return _run(state, state.get("current_step", ""), intent="split_step", session_id=session_id)
 
 
-def resume(state: FocusFlowState) -> FocusFlowState:
-    return _run(state, "resume", intent="resume")
+def resume(state: FocusFlowState, session_id: str | None = None) -> FocusFlowState:
+    return _run(state, "resume", intent="resume", session_id=session_id)
 
 
-def reset_all() -> FocusFlowState:
-    db.delete_all()
+def reset_all(session_id: str | None = None) -> FocusFlowState:
+    db.delete_all(session_id=session_id)
     return new_state()
 
 
-def set_language(state: FocusFlowState, lang: str) -> FocusFlowState:
+def set_language(
+    state: FocusFlowState, lang: str, session_id: str | None = None
+) -> FocusFlowState:
     updated = dict(state)
     updated["lang"] = lang
-    db.save_state(updated)
+    db.save_state(updated, session_id=session_id)
     return updated
 
 
-def record_cognitive_load(rating: str) -> None:
+def record_cognitive_load(rating: str, session_id: str | None = None) -> None:
     """Self-reported effort after a completed task (PRD section 10)."""
-    db.log_event("cognitive_load", {"rating": rating})
+    db.log_event("cognitive_load", {"rating": rating}, session_id=session_id)

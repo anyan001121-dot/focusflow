@@ -7,6 +7,7 @@ tracking is added on this page; it only reads and summarizes.
 
 from __future__ import annotations
 
+import uuid
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
@@ -19,14 +20,17 @@ st.set_page_config(page_title="FocusFlow -- Analytics", page_icon="📊", layout
 
 db.init_db()
 
-state = st.session_state.get("ff_state") or service.load_or_new_state()
+# See app.py: only matters in FOCUSFLOW_MULTI_SESSION mode (public demo).
+session_id = st.session_state.setdefault("session_id", str(uuid.uuid4()))
+
+state = st.session_state.get("ff_state") or service.load_or_new_state(session_id)
 lang = state.get("lang", "en")
 
 st.title(t(lang, "analytics_title"))
 st.caption(t(lang, "analytics_caption"))
 
-events = db.get_events(limit=5000)
-prefs = db.load_preferences()
+events = db.get_events(limit=5000, session_id=session_id)
+prefs = db.load_preferences(session_id=session_id)
 
 if not events:
     st.info(t(lang, "no_data_yet"))

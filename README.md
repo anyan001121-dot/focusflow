@@ -70,6 +70,10 @@ Written for whoever's reviewing this as a work sample, not just a user:
 
 **4. A lightweight personalization loop instead of a heavier ML pipeline.** Two numbers — the actual/estimated time ratio and the breakdown-rejection rate — are enough signal to nudge future step sizing without needing a model fine-tune or a recommender system. Simple wins when the marginal accuracy gain from something heavier isn't worth the added failure surface.
 
+**5. Single-user by default, multi-tenant by a flag, not a rewrite.** Every SQLite row is keyed `"default"` unless `FOCUSFLOW_MULTI_SESSION=true` is set, in which case `focusflow/db.py` keys every row by a per-browser-session id instead. This exists because a shared public demo (many strangers hitting one process) and a personal local install (one person, state that must survive restarts) have opposite correctness requirements — the flag lets the same code serve both without the local Resume experience being compromised by demo-only concerns.
+
+**6. A failing LLM call degrades, it doesn't crash the page.** Real provider calls get a bounded timeout and the SDK's own retry/backoff (`focusflow/llm.py`); if a call still fails, or the model returns text that doesn't parse as JSON, FocusFlow logs a warning and falls back to the same heuristic output a missing API key would produce. For a tool whose entire pitch is "stay calm, don't overwhelm," a stack trace on a rate limit would be a worse failure than a slightly duller suggestion.
+
 <details>
 <summary><strong>Architecture</strong> (click to expand)</summary>
 
@@ -160,6 +164,16 @@ FocusFlow works with **no API key** (heuristic mock backend). These steps are in
 - [ ] Restart the app: stop it and run `streamlit run app.py` again.
 - [ ] Check the sidebar's "LLM backend" line, or the in-app **Setup** page, for a live connection status.
 
+### Deploying your own copy
+
+Deploying to something like [Streamlit Community Cloud](https://share.streamlit.io) works out of the box (point it at this repo, main file `app.py`). One setting matters if more than one person will use the same deployed instance at once:
+
+```
+FOCUSFLOW_MULTI_SESSION=true
+```
+
+Without it, every visitor to a shared deployment reads and writes the same local-profile row — fine for your own single-user instance, not fine for a public demo with concurrent strangers. See [Design decisions](#design-decisions) point 5.
+
 ### Privacy & safety
 
 - Not a medical device: no ADHD diagnosis, no medication advice, no replacement for professional care.
@@ -227,6 +241,10 @@ FocusFlow works with **no API key** (heuristic mock backend). These steps are in
 **3. 零配置就能跑。** 启发式的"mock" LLM（`focusflow/mock_llm.py`）让 brain dump、拆解、打断处理这一整套逻辑在没有 API key 的情况下也能跑通（质量会打折扣）。这是刻意的可访问性/可评审性选择：任何人 clone 仓库后 30 秒内就能看到真实行为，不用先去申请 API key。
 
 **4. 用轻量的个性化循环，而不是更重的机器学习流水线。** 两个数字——实际/预估用时比例、拆解被拒绝率——就足以在未来的拆解里微调步骤大小，不需要模型微调或推荐系统。当更重的方案带来的准确率提升配不上它引入的额外故障面时，简单方案更划算。
+
+**5. 默认单用户，靠一个开关变多租户，而不是重写一遍。** 每一行 SQLite 数据默认都用 `"default"` 作为 key，除非设置了 `FOCUSFLOW_MULTI_SESSION=true`，这时 `focusflow/db.py` 会改成按每个浏览器会话的 id 来区分数据。这么做的原因是：公开的共享 demo（很多陌生人同时用一个进程）和个人本地安装（只有一个人，状态需要跨重启保留）对"正确性"的要求是相反的——用一个开关就能让同一套代码同时服务这两种场景，而不用为了 demo 场景牺牲本地版 Resume 的体验。
+
+**6. LLM 调用失败时优雅降级，而不是让页面崩溃。** 真实 provider 调用设置了超时时间，并交给 SDK 自带的重试/退避机制处理（`focusflow/llm.py`）；如果调用最终还是失败了，或者模型返回的文本解析不出 JSON，FocusFlow 会记一条警告日志，然后回退成"没配 API key 时"同样的启发式输出。对一个卖点是"保持冷静、不要让人过载"的工具来说，因为触发了限流就甩一个报错堆栈出来，比一个稍微逊色一点的建议更糟糕。
 
 <details>
 <summary><strong>架构</strong>（点击展开）</summary>
@@ -317,6 +335,16 @@ FocusFlow **不需要任何 API key** 也能跑（启发式 mock 后端）。以
 - [ ] 打开 `.env`，把你的 key 粘贴到 `ANTHROPIC_API_KEY=` 或 `OPENAI_API_KEY=` 后面（两个都填时优先用 Anthropic）。
 - [ ] 重启应用：停掉后重新运行 `streamlit run app.py`。
 - [ ] 看侧边栏的 "LLM backend" 那一行，或者应用内的 **Setup** 页面，会实时显示连接状态。
+
+### 部署自己的版本
+
+部署到 [Streamlit Community Cloud](https://share.streamlit.io) 这类平台开箱即用（指向这个仓库，主文件填 `app.py`）。如果会有不止一个人同时用同一个部署实例，有一个设置很重要：
+
+```
+FOCUSFLOW_MULTI_SESSION=true
+```
+
+不设这个的话，共享部署的每个访问者都会读写同一行"本地档案"数据——自己一个人用没问题，公开 demo 有多个陌生人同时访问就不行了。详见"设计决策"第 5 条。
 
 ### 隐私与安全
 
