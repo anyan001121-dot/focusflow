@@ -169,6 +169,27 @@ FocusFlow works with **no API key** (heuristic mock backend). These steps are in
 - [ ] Restart the app: stop it and run `streamlit run app.py` again.
 - [ ] Check the sidebar's "LLM backend" line, or the in-app **Setup** page, for a live connection status.
 
+### Example: what changes once Claude is connected
+
+*(Illustrative — actual wording will vary by model version and phrasing; this isn't a captured transcript.)*
+
+With `ANTHROPIC_API_KEY` set, typing one clear goal —
+
+> "write my resume"
+
+— is a single task, so it skips Brain Dump and goes straight to Breakdown. A representative response:
+
+> **Task:** Write my resume
+>
+> **Start here** (~5 min): Open a blank document and type just your name and contact info at the top.
+> *Done when:* your name and contact info are visible on the page.
+>
+> **Then:**
+> 1. (~10 min) List your last two job titles and their date ranges — no descriptions yet.
+> 2. (~15 min) Pick one of those jobs and write one bullet describing a result you got, with a number in it if you can.
+
+Notice what's *not* in there: no "write a compelling professional summary," no advice about formatting or keywords. The breakdown's only job is to hand you one thing you can start in the next five minutes — a full resume-writing plan is exactly the kind of overwhelming first response FocusFlow is built to avoid (see [The problem](#the-problem)). In practice mode (no API key), the same input gets a similar shape from `focusflow/mock_llm.py`, just from a fixed template rather than genuine reasoning about the goal.
+
 ### Deploying your own copy
 
 Deploying to something like [Streamlit Community Cloud](https://share.streamlit.io) works out of the box (point it at this repo, main file `app.py`). One setting matters if more than one person will use the same deployed instance at once:
@@ -341,6 +362,27 @@ FocusFlow **不需要任何 API key** 也能跑（启发式 mock 后端）。以
 - [ ] 打开 `.env`，把你的 key 粘贴到 `ANTHROPIC_API_KEY=` 或 `OPENAI_API_KEY=` 后面（两个都填时优先用 Anthropic）。
 - [ ] 重启应用：停掉后重新运行 `streamlit run app.py`。
 - [ ] 看侧边栏的 "LLM backend" 那一行，或者应用内的 **Setup** 页面，会实时显示连接状态。
+
+### 示例：接上 Claude 之后会变成什么样
+
+*（这是示意性的例子，不是真实调用截图——具体措辞会因模型版本和提问方式而不同。）*
+
+设置好 `ANTHROPIC_API_KEY` 后，输入一个清晰的目标——
+
+> "写简历"
+
+——因为这已经是单一任务，会跳过 Brain Dump，直接进入拆解。一个有代表性的回复大概是这样：
+
+> **任务：** 写简历
+>
+> **从这里开始**（约 5 分钟）：打开一个空白文档，先在最上面写下你的姓名和联系方式。
+> *完成标志：* 文档里已经能看到姓名和联系方式了。
+>
+> **接下来：**
+> 1.（约 10 分钟）列出你最近两份工作的职位名称和时间段，先不用写细节。
+> 2.（约 15 分钟）挑其中一份工作，写一条具体的成果描述，能带上数字更好。
+
+注意里面**没有**的东西：没有"写一段有吸引力的自我总结"，没有排版建议，也没有关键词优化。拆解唯一的任务就是给你一件接下来五分钟内就能开始的事——一份完整的简历写作计划，恰恰是 FocusFlow 想避免甩给你的那种"过载的第一反应"（见上面"要解决的问题"）。练习模式（没配 API key）下，同一个输入会从 `focusflow/mock_llm.py` 的固定模板里得到类似结构的结果，只是靠的是模板，不是真正针对目标的推理。
 
 ### 部署自己的版本
 
