@@ -10,6 +10,10 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT license"></a>
 </p>
 
+<p align="center">
+  <a href="https://focusflow-j2gkquxeg2cifcxmyqxw8w.streamlit.app/"><strong>Try it live → / 在线试用 →</strong></a>　(practice mode, no signup — see <a href="#connecting-a-real-llm">Connecting a real LLM</a> / <a href="#接入真实-llm">接入真实 LLM</a>)
+</p>
+
 <p align="center"><strong><a href="#english">English</a> · <a href="#中文">中文</a></strong></p>
 
 ---
