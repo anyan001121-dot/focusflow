@@ -116,6 +116,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "🛡️ The agent actually wanted to switch tasks -- a hard rule kept you on '{task}' instead.",
         "zh": "🛡️ Agent 本来想切换任务——但被一条硬规则拦下来了，继续留在「{task}」上。",
     },
+    "llm_fallback_notice": {
+        "en": "⚠️ The connected LLM had a hiccup just now, so this suggestion came from practice mode instead.",
+        "zh": "⚠️ 刚才连接的 LLM 出了点小状况，这条建议是练习模式给出的。",
+    },
     "completed_header": {"en": "✅ Done so far ({n})", "zh": "✅ 已经完成（{n}）"},
     "done_button": {"en": "✅ Done with this step!", "zh": "✅ 这一步搞定啦！"},
     "split_button": {

@@ -38,6 +38,14 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _pop_fallback_flag(result: dict) -> bool:
+    """Strip llm.py's fallback marker off a parsed response and report
+    whether it was there. See llm.py:FALLBACK_FLAG -- every node that calls
+    llm.complete_json() surfaces this in its response so the UI can
+    disclose a degraded turn instead of silently looking dumber."""
+    return bool(result.pop(llm.FALLBACK_FLAG, False))
+
+
 def _minutes_since(iso_ts: str) -> float | None:
     if not iso_ts:
         return None
@@ -98,6 +106,7 @@ def brain_dump_node(state: FocusFlowState) -> dict:
     result = llm.complete_json(
         prompts.brain_dump_system(lang), state["user_input"], task="brain_dump", lang=lang
     )
+    llm_fallback = _pop_fallback_flag(result)
     tasks = result.get("tasks", [])
     actionable = [t for t in tasks if t.get("actionable", True)]
     ideas = [t for t in tasks if not t.get("actionable", True)]
@@ -114,6 +123,7 @@ def brain_dump_node(state: FocusFlowState) -> dict:
             "priorities": priorities,
             "ideas": ideas,
             "later_list_additions": later,
+            "llm_fallback": llm_fallback,
         },
     }
 
@@ -126,6 +136,7 @@ def breakdown_node(state: FocusFlowState) -> dict:
     result = llm.complete_json(
         prompts.breakdown_system(lang, hint), goal, task="breakdown", lang=lang, ratio=ratio
     )
+    llm_fallback = _pop_fallback_flag(result)
     first = result["first_step"]
     next_steps = result.get("next_steps", [])
     now = _now()
@@ -150,6 +161,7 @@ def breakdown_node(state: FocusFlowState) -> dict:
             "current_step": first["action"],
             "estimated_time": first.get("estimated_minutes", 5),
             "completion_condition": first.get("completion_condition", ""),
+            "llm_fallback": llm_fallback,
         },
     }
 
@@ -169,6 +181,7 @@ def interruption_node(state: FocusFlowState) -> dict:
     result = llm.complete_json(
         prompts.interruption_system(lang), prompt_input, task="interruption", lang=lang
     )
+    llm_fallback = _pop_fallback_flag(result)
     proposed_action = result.get("action", policy.SAFE_DEFAULT)
     action, was_downgraded = policy.enforce(proposed_action, state)
 
@@ -189,6 +202,7 @@ def interruption_node(state: FocusFlowState) -> dict:
             "current_task": state.get("current_task", ""),
             "current_step": state.get("current_step", ""),
             "next_action": state.get("next_action", ""),
+            "llm_fallback": llm_fallback,
         },
     }
 
@@ -253,6 +267,7 @@ def split_step_node(state: FocusFlowState) -> dict:
     result = llm.complete_json(
         prompts.breakdown_system(lang), current, task="breakdown", lang=lang, ratio=ratio
     )
+    llm_fallback = _pop_fallback_flag(result)
     first = result["first_step"]
     rest = result.get("next_steps", [])
     new_queue = rest + list(state.get("task_queue", []))
@@ -269,6 +284,7 @@ def split_step_node(state: FocusFlowState) -> dict:
             "current_step": first["action"],
             "estimated_time": first.get("estimated_minutes", 5),
             "completion_condition": first.get("completion_condition", ""),
+            "llm_fallback": llm_fallback,
         },
     }
 

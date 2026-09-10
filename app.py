@@ -119,6 +119,9 @@ with main_col:
     response = state.get("response", {})
     rtype = response.get("type")
 
+    if response.get("llm_fallback"):
+        st.caption(t(lang, "llm_fallback_notice"))
+
     if rtype == "resume":
         if response.get("has_active_task"):
             st.info(t(lang, "resume_welcome"))

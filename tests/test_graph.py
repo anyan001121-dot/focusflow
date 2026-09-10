@@ -35,6 +35,29 @@ def test_new_task_breaks_down_into_concrete_first_step_and_starts_focus():
     assert result["current_step"]
     assert result["estimated_time"] > 0
     assert result["response"]["type"] == "focus_start"
+    assert result["response"]["llm_fallback"] is False
+
+
+def test_llm_fallback_is_disclosed_in_the_response_not_just_logged(monkeypatch):
+    """A real API failure should still produce a usable, schema-correct
+    breakdown (via llm.py's own fallback to mock) -- and the node must
+    surface that this turn was degraded rather than swallow it."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(
+        graph_module.llm,
+        "_call_anthropic",
+        lambda system, user: (_ for _ in ()).throw(ConnectionError("simulated outage")),
+    )
+
+    graph = build_graph()
+    state = new_state()
+    state["user_input"] = "Prepare for an AI Product Manager interview"
+    result = graph.invoke(state)
+
+    assert result["response"]["type"] == "focus_start"
+    assert result["response"]["llm_fallback"] is True
+    assert result["current_step"]  # still a usable, schema-correct suggestion
 
 
 def test_interruption_during_focus_mode_does_not_replace_current_task():

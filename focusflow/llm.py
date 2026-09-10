@@ -22,6 +22,13 @@ page with a traceback. For an ADHD-focused product this is a deliberate
 choice, not a shortcut: a degraded-but-calm suggestion beats an error
 screen, and it's the same reason a public demo instance doesn't go down
 just because it hit a rate limit.
+
+The fallback is disclosed, not silent: the returned dict carries a
+`FALLBACK_FLAG` key when this happened, and focusflow/graph.py surfaces
+that in the response so the UI can tell the user this turn's suggestion
+came from practice mode -- a user who configured a real API key and
+suddenly gets duller answers with no explanation would reasonably think
+the product got worse, not that their key hit a rate limit.
 """
 
 from __future__ import annotations
@@ -68,6 +75,9 @@ def active_provider() -> str:
     return "mock"
 
 
+FALLBACK_FLAG = "_llm_fallback"
+
+
 def _fall_back_to_mock(provider: str, task: str, user: str, lang: str, ratio, exc: Exception) -> Any:
     warnings.warn(
         f"FocusFlow: {provider} call failed ({exc.__class__.__name__}: {exc}); "
@@ -75,7 +85,14 @@ def _fall_back_to_mock(provider: str, task: str, user: str, lang: str, ratio, ex
         RuntimeWarning,
         stacklevel=3,
     )
-    return mock_llm.run(task, user, lang=lang, ratio=ratio)
+    result = mock_llm.run(task, user, lang=lang, ratio=ratio)
+    # Tag the result so the caller can tell the user this turn is degraded --
+    # see graph.py, which pops this key before treating the rest as the
+    # normal schema. Silent degradation would look like the product just
+    # got dumber for no reason; that's worse than a small disclosure.
+    if isinstance(result, dict):
+        result[FALLBACK_FLAG] = True
+    return result
 
 
 def complete_json(
