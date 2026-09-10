@@ -76,7 +76,7 @@ A few design choices that shape how this actually feels to use:
 
 **5. Your history sticks around locally; a shared copy keeps everyone separate.** Run this for yourself, and your state survives closing the app and coming back — that's what Resume is for. If someone deploys a public copy for strangers to try, one setting (`FOCUSFLOW_MULTI_SESSION=true`) keeps every visitor's data apart instead of everyone reading and writing the same profile. Either way, you get the behavior that matches how you're actually using it.
 
-**6. If the LLM it's talking to has a bad moment, you won't see a crash.** A timeout, a rate limit, a response that doesn't parse — any of that gets caught, logged quietly, and FocusFlow falls back to the same offline suggestion you'd get with no API key at all. A tool whose whole pitch is staying calm shouldn't be the one handing you a stack trace.
+**6. A one-off LLM hiccup stays quiet; a broken API key doesn't.** A timeout, a rate limit, a response that doesn't parse — any of that gets caught, and FocusFlow falls back to the same offline suggestion you'd get with no API key at all, with a small note that this turn was degraded. But if the actual problem is that your API key is invalid or expired, silently retrying forever would just hide a real problem behind an ever-present "had a hiccup" message — so that case gets called out as an actual error pointing you at the Setup page instead. A tool whose whole pitch is staying calm shouldn't hand you a stack trace over a rate limit, but it also shouldn't pretend nothing's wrong when something needs fixing.
 
 <details>
 <summary><strong>Architecture</strong> (click to expand)</summary>
@@ -270,7 +270,7 @@ Without it, every visitor to a shared deployment reads and writes the same local
 
 **5. 你自己用，记录会一直留着；如果是公开分享的版本，每个人的数据会分开。** 你自己在本地跑，关掉再打开，记录还在——这就是"恢复"这个功能的意义。如果有人把它部署成一个给陌生人试用的公开版本，只要开一个设置（`FOCUSFLOW_MULTI_SESSION=true`），每个访客的数据就会分开，不会互相读到对方的东西。不管哪种情况，你拿到的行为都会跟你实际的使用场景对上。
 
-**6. 就算它连的那个 LLM 状态不好，你也不会看到报错。** 超时、被限流、返回的内容解析不出来——这些情况都会被接住，安静地记一条日志，然后 FocusFlow 会退回成跟没配 API key 时一样的建议。一个卖点是"让你保持冷静"的工具，不该自己先甩一个报错堆栈给你看。
+**6. LLM 偶尔抽风会安静处理，但 API key 真的坏了不会。** 超时、被限流、返回的内容解析不出来——这些情况都会被接住，FocusFlow 退回成跟没配 API key 时一样的建议，顺带提示一句"这一轮降级了"。但如果问题其实是你的 API key 失效或者不对，一直悄悄重试、每次都只说"出了点小状况"，只会把一个真正需要你去处理的问题藏起来——所以这种情况会用一个真正的报错提示你去 Setup 页面看看，而不是含糊带过。一个卖点是"让你保持冷静"的工具，不该因为触发了限流就甩一个报错堆栈出来，但也不该在真出问题的时候装作什么事都没有。
 
 <details>
 <summary><strong>架构</strong>（点击展开）</summary>

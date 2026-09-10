@@ -120,6 +120,14 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "⚠️ The connected LLM had a hiccup just now, so this suggestion came from practice mode instead.",
         "zh": "⚠️ 刚才连接的 LLM 出了点小状况，这条建议是练习模式给出的。",
     },
+    "llm_fallback_rate_limit": {
+        "en": "⏳ Hit a rate limit just now, so this suggestion came from practice mode instead. Should clear up on its own shortly.",
+        "zh": "⏳ 刚才触发了限流，这条建议是练习模式给出的。一般过一会儿就恢复了。",
+    },
+    "llm_fallback_auth": {
+        "en": "❌ Your API key looks invalid or expired, so this suggestion came from practice mode instead. Check the **Setup** page in the sidebar.",
+        "zh": "❌ 你的 API key 好像失效了或者不对，这条建议是练习模式给出的。去侧边栏的 **Setup** 页面看看。",
+    },
     "completed_header": {"en": "✅ Done so far ({n})", "zh": "✅ 已经完成（{n}）"},
     "done_button": {"en": "✅ Done with this step!", "zh": "✅ 这一步搞定啦！"},
     "split_button": {

@@ -119,7 +119,12 @@ with main_col:
     response = state.get("response", {})
     rtype = response.get("type")
 
-    if response.get("llm_fallback"):
+    fallback_reason = response.get("llm_fallback")
+    if fallback_reason == "auth":
+        st.error(t(lang, "llm_fallback_auth"))
+    elif fallback_reason == "rate_limit":
+        st.warning(t(lang, "llm_fallback_rate_limit"))
+    elif fallback_reason:
         st.caption(t(lang, "llm_fallback_notice"))
 
     if rtype == "resume":

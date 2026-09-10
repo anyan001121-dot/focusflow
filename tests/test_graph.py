@@ -56,8 +56,29 @@ def test_llm_fallback_is_disclosed_in_the_response_not_just_logged(monkeypatch):
     result = graph.invoke(state)
 
     assert result["response"]["type"] == "focus_start"
-    assert result["response"]["llm_fallback"] is True
+    assert result["response"]["llm_fallback"] == "transient"
     assert result["current_step"]  # still a usable, schema-correct suggestion
+
+
+def test_llm_auth_failure_is_disclosed_as_auth_not_a_generic_hiccup(monkeypatch):
+    """An invalid API key isn't a one-off blip -- it'll fail every call
+    until the user fixes it, so the UI needs to say so distinctly rather
+    than reusing the same soft "had a hiccup" message every time."""
+    import anthropic
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    exc = anthropic.AuthenticationError.__new__(anthropic.AuthenticationError)
+    monkeypatch.setattr(
+        graph_module.llm, "_call_anthropic", lambda system, user: (_ for _ in ()).throw(exc)
+    )
+
+    graph = build_graph()
+    state = new_state()
+    state["user_input"] = "Prepare for an AI Product Manager interview"
+    result = graph.invoke(state)
+
+    assert result["response"]["llm_fallback"] == "auth"
 
 
 def test_interruption_during_focus_mode_does_not_replace_current_task():

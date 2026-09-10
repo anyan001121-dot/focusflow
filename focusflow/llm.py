@@ -18,17 +18,24 @@ backoff for transient errors -- no need to reinvent that). If the call
 still fails after retries, or the model returns text `_extract_json` can't
 parse, FocusFlow logs a warning and **falls back to the same heuristic
 mock output a missing API key would produce** rather than crashing the
-page with a traceback. For an ADHD-focused product this is a deliberate
-choice, not a shortcut: a degraded-but-calm suggestion beats an error
-screen, and it's the same reason a public demo instance doesn't go down
-just because it hit a rate limit.
+page with a traceback.
 
-The fallback is disclosed, not silent: the returned dict carries a
-`FALLBACK_FLAG` key when this happened, and focusflow/graph.py surfaces
-that in the response so the UI can tell the user this turn's suggestion
-came from practice mode -- a user who configured a real API key and
-suddenly gets duller answers with no explanation would reasonably think
-the product got worse, not that their key hit a rate limit.
+That fallback is disclosed, not silent -- and not disclosed uniformly
+either. The returned dict carries a `FALLBACK_FLAG` key set to one of:
+
+    "auth"        an invalid/expired API key -- this will keep happening
+                  on every call until the user fixes it, so it's worth a
+                  real, persistent error pointing at the Setup page.
+    "rate_limit"  a quota/rate-limit hit -- usually resolves on its own.
+    "transient"   a timeout, connection error, or other one-off failure.
+    "parse"       the model's response didn't parse as JSON.
+
+focusflow/graph.py surfaces this in the response so the UI (app.py) can
+match the loudness of the disclosure to how actionable it is: a wrong API
+key gets a real error, a rate limit gets a soft warning, everything else
+gets a one-line caption. Treating all of these the same way would either
+alarm someone over a one-off network blip, or let a genuinely broken key
+go unnoticed indefinitely behind an ever-present "having a hiccup" message.
 """
 
 from __future__ import annotations
@@ -43,6 +50,8 @@ from . import mock_llm
 
 _TIMEOUT_SECONDS = 20.0
 _MAX_RETRIES = 2
+
+FALLBACK_FLAG = "_llm_fallback"
 
 
 class LLMError(RuntimeError):
@@ -75,23 +84,44 @@ def active_provider() -> str:
     return "mock"
 
 
-FALLBACK_FLAG = "_llm_fallback"
+def _classify_error(provider: str, exc: Exception) -> str:
+    """Sort a provider failure into "auth" / "rate_limit" / "transient" /
+    "parse" -- see module docstring for why the distinction matters."""
+    if isinstance(exc, LLMError):
+        return "parse"
+    try:
+        if provider == "anthropic":
+            import anthropic
+
+            if isinstance(exc, (anthropic.AuthenticationError, anthropic.PermissionDeniedError)):
+                return "auth"
+            if isinstance(exc, anthropic.RateLimitError):
+                return "rate_limit"
+        elif provider == "openai":
+            import openai
+
+            if isinstance(exc, (openai.AuthenticationError, openai.PermissionDeniedError)):
+                return "auth"
+            if isinstance(exc, openai.RateLimitError):
+                return "rate_limit"
+    except Exception:  # noqa: BLE001 -- classification must never itself fail
+        pass
+    return "transient"
 
 
 def _fall_back_to_mock(provider: str, task: str, user: str, lang: str, ratio, exc: Exception) -> Any:
+    reason = _classify_error(provider, exc)
     warnings.warn(
         f"FocusFlow: {provider} call failed ({exc.__class__.__name__}: {exc}); "
-        "falling back to practice-mode output for this turn.",
+        f"falling back to practice-mode output for this turn (reason: {reason}).",
         RuntimeWarning,
         stacklevel=3,
     )
     result = mock_llm.run(task, user, lang=lang, ratio=ratio)
-    # Tag the result so the caller can tell the user this turn is degraded --
-    # see graph.py, which pops this key before treating the rest as the
-    # normal schema. Silent degradation would look like the product just
-    # got dumber for no reason; that's worse than a small disclosure.
+    # Tag the result so the caller can disclose it -- see graph.py, which
+    # pops this key before treating the rest as the normal schema.
     if isinstance(result, dict):
-        result[FALLBACK_FLAG] = True
+        result[FALLBACK_FLAG] = reason
     return result
 
 
