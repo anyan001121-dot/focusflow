@@ -3,7 +3,8 @@
     Intent Router
         -> brain_dump_node      (messy input -> top-3 priorities)
         -> breakdown_node       (one goal -> one small first step)
-        -> interruption_node    (focus-mode aside -> Later List, keep focus)
+        -> interruption_node    (bounded agent: proposes an action, policy.py
+                                  enforces it -- see focusflow/policy.py)
         -> continue_focus_node  ("done" -> advance to next queued step)
         -> split_step_node      ("too big" -> break current step into smaller ones)
         -> resume_node          (rebuild a minimal "where you left off")
@@ -22,7 +23,7 @@ from datetime import datetime, timezone
 
 from langgraph.graph import END, StateGraph
 
-from . import llm, prompts
+from . import llm, policy, prompts
 from .state import FocusFlowState
 
 _SPLIT_RE = re.compile(r"[,，、;；\n]+|(?:\band\b)|然后|接着|还要|还有")
@@ -154,6 +155,12 @@ def breakdown_node(state: FocusFlowState) -> dict:
 
 
 def interruption_node(state: FocusFlowState) -> dict:
+    """Bounded agent: the LLM proposes one of three actions (it is explicitly
+    allowed to propose abandoning the current task); focusflow/policy.py is
+    the deterministic gate that decides whether the proposal is actually
+    allowed to happen. focus_mode is never cleared here regardless of what
+    gets proposed -- see test_graph.py for a test that forces the agent to
+    insist on switching tasks and asserts the policy blocks it anyway."""
     lang = state.get("lang", "en")
     prompt_input = (
         f"Current task: {state.get('current_task', '')}\n"
@@ -162,9 +169,11 @@ def interruption_node(state: FocusFlowState) -> dict:
     result = llm.complete_json(
         prompts.interruption_system(lang), prompt_input, task="interruption", lang=lang
     )
-    related = result.get("related", False)
+    proposed_action = result.get("action", policy.SAFE_DEFAULT)
+    action, was_downgraded = policy.enforce(proposed_action, state)
+
     later_list = list(state.get("later_list", []))
-    captured = not related
+    captured = action == "capture_to_later"
     if captured:
         later_list.append(state["user_input"])
 
@@ -174,6 +183,9 @@ def interruption_node(state: FocusFlowState) -> dict:
         "response": {
             "type": "interruption",
             "captured": captured,
+            "proposed_action": proposed_action,
+            "enforced_action": action,
+            "policy_downgraded": was_downgraded,
             "current_task": state.get("current_task", ""),
             "current_step": state.get("current_step", ""),
             "next_action": state.get("next_action", ""),

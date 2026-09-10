@@ -174,6 +174,8 @@ with main_col:
                 st.warning(t(lang, "interruption_captured"))
             else:
                 st.caption(t(lang, "interruption_related"))
+            if response.get("policy_downgraded"):
+                st.caption(t(lang, "policy_kept_on_track", task=state.get("current_task", "")))
         elif response.get("type") == "step_split":
             st.caption(t(lang, "step_split_notice"))
 

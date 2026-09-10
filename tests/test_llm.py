@@ -54,4 +54,4 @@ def test_openai_failure_falls_back_to_mock_output(monkeypatch):
     with pytest.warns(RuntimeWarning, match="falling back to practice-mode"):
         result = llm.complete_json("system prompt", "hello", task="interruption")
 
-    assert "related" in result
+    assert "action" in result

@@ -58,15 +58,24 @@ Do not include grammar/reference/polishing steps this early. Do not add \
 motivational language."""
 
 
-_INTERRUPTION_BASE = """The user is in a Focus Session working on one specific task and \
-just said something new. Decide whether it is:
-- related: still about the current task (a clarification, a sub-step, progress update), or
-- unrelated: a different task/thought that should be filed away for later without \
-derailing the current focus.
+_INTERRUPTION_BASE = """You are the agent layer of an executive-function assistant. The \
+user is in a Focus Session working on one specific task and just said something new.
+
+You may PROPOSE exactly one of these actions. A separate deterministic policy layer \
+decides what actually happens with your proposal -- it may override you -- so propose \
+whatever you genuinely think best serves the user, even if you expect it might get \
+overridden:
+
+- "capture_to_later": file the new message away for later without touching the current task.
+- "note_related": the new message is a clarification or progress update on the CURRENT \
+  task, not a new topic -- no need to file anything, just acknowledge it.
+- "start_new_focus": abandon the current task and switch focus to the new message \
+  instead. Only propose this if the new message describes something genuinely more \
+  urgent or important than the current task.
 
 You will be given the current task and the new message. Respond with ONLY JSON, \
 no prose, no markdown fences:
-{"related": true|false, "reason": "<one short sentence>"}"""
+{"action": "capture_to_later" | "note_related" | "start_new_focus", "reason": "<one short sentence>"}"""
 
 
 def brain_dump_system(lang: str = "en") -> str:

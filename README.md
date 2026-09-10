@@ -66,7 +66,7 @@ Generic to-do apps make this worse: they reward capturing more, not starting soo
 
 Written for whoever's reviewing this as a work sample, not just a user:
 
-**1. A controlled workflow, not an autonomous agent.** Using Anthropic's own [workflow vs. agent](https://www.anthropic.com/research/building-effective-agents) distinction: a *workflow* is code-defined control flow with an LLM called at fixed points; an *agent* lets the LLM decide what to do next. FocusFlow's router (`focusflow/graph.py`) is entirely code-defined — brain dump, breakdown, interruption, resume are hard-coded branches, and the LLM is only ever asked to do content generation *inside* a branch, never to pick the branch. This was a deliberate trade against a more "agentic," self-directed design: an autonomous agent that mis-classifies an interruption as the new main task is a normal LLM failure rate elsewhere, but for this product it directly attacks the one thing it promises never to do. Determinism was worth more than flexibility here.
+**1. Bounded agency, not full autonomy.** Using Anthropic's own [workflow vs. agent](https://www.anthropic.com/research/building-effective-agents) framing: a *workflow* is code-defined control flow with an LLM called at fixed points; an *agent* lets the LLM decide what to do next. FocusFlow's top-level router (`focusflow/graph.py`) is code-defined — brain dump, breakdown, resume are hard-coded branches. But interruption handling is a genuine, constrained *agent*: the LLM observes the current task and the new message and **proposes** one of three actions, including explicitly proposing to abandon the current task if it judges the new message urgent enough (`focusflow/prompts.py`). It is never allowed to just do that — `focusflow/policy.py` is a deterministic gate every proposal passes through, and "abandon the active task" is categorically excluded from the allowed set whenever `focus_mode` is on, no matter how the LLM justifies it. [`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py) forces the model to insist on switching and asserts the policy blocks it anyway. The guarantee lives in code that can't be talked out of it; the judgment calls that don't threaten the guarantee are the model's to make.
 
 **2. Evaluation before the LLM even mattered.** The spec's own instruction was "don't evaluate this by whether the responses sound good" — so the events log (`focusflow/db.py`) and the personalization loop (`focusflow/service.py`) were built to track *actual-vs-estimated time* and *breakdown-acceptance rate* from day one, not added after the fact. See [Evaluation](#evaluation).
 
@@ -108,6 +108,7 @@ Implemented with [LangGraph](https://github.com/langchain-ai/langgraph) as a sma
 |---|---|
 | Shared state schema | `focusflow/state.py` |
 | Router + nodes (LangGraph) | `focusflow/graph.py` |
+| Bounded-agency policy engine | `focusflow/policy.py` |
 | DB + graph orchestration, personalization | `focusflow/service.py` |
 | LLM provider wrapper | `focusflow/llm.py`, `focusflow/mock_llm.py` |
 | Prompts | `focusflow/prompts.py` |
@@ -238,7 +239,7 @@ Without it, every visitor to a shared deployment reads and writes the same local
 
 这部分是写给"把这当作作品来评估的人"看的，不只是给用户看的：
 
-**1. 受控的工作流，而不是自主 Agent。** 借用 Anthropic 自己提出的 [workflow vs. agent](https://www.anthropic.com/research/building-effective-agents) 区分：*workflow* 是代码写死的控制流，LLM 只在固定节点被调用；*agent* 则是让 LLM 自己决定下一步做什么。FocusFlow 的路由（`focusflow/graph.py`）完全是代码写死的——brain dump、拆解、打断、恢复都是硬编码的分支，LLM 只负责在某个分支*内部*生成内容，从不负责选择分支。这是刻意放弃"更自主"设计的结果：一个把打断误判成新主线任务的自主 Agent，在别的产品里可能只是正常的模型失误率，但对这个产品来说，这恰好直接攻击了它唯一承诺"绝不会做"的事情。确定性在这里比灵活性更值钱。
+**1. 有边界的自主性，而不是完全自主。** 借用 Anthropic 自己提出的 [workflow vs. agent](https://www.anthropic.com/research/building-effective-agents) 区分：*workflow* 是代码写死的控制流，LLM 只在固定节点被调用；*agent* 则是让 LLM 自己决定下一步做什么。FocusFlow 顶层的路由（`focusflow/graph.py`）是代码写死的——brain dump、拆解、恢复都是硬编码的分支。但打断处理是一个真正的、有边界的 *agent*：LLM 会观察当前任务和新消息，然后**提议**三个动作之一——如果它判断新消息足够紧急，甚至可以明确提议放弃当前任务（见 `focusflow/prompts.py`）。但它永远没有权力直接执行——`focusflow/policy.py` 是一道确定性的关卡，每个提议都要经过它；只要 `focus_mode` 是开着的，"放弃当前任务"这个选项就被彻底排除在允许集合之外，不管 LLM 怎么论证都没用。[`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py) 这个测试就是强迫模型坚持要切换任务，然后断言 policy 层照样把它拦下来。核心保证写在代码里、说服不了；不威胁这个保证的判断，才交给模型自己拿主意。
 
 **2. 评估框架先于"LLM 好不好用"这件事本身。** 需求文档原话是"不要靠回复听起来好不好来评估"——所以事件日志（`focusflow/db.py`）和个性化反馈循环（`focusflow/service.py`）从第一天起就在追踪*实际用时/预估用时*和*拆解接受率*，不是后补上去的。详见下方"评估指标"。
 
@@ -280,6 +281,7 @@ Brain Dump       新任务          Resume           打断
 |---|---|
 | 共享状态结构 | `focusflow/state.py` |
 | 路由 + 节点（LangGraph） | `focusflow/graph.py` |
+| 有边界的 Agent 策略引擎 | `focusflow/policy.py` |
 | 数据库 + 图编排、个性化 | `focusflow/service.py` |
 | LLM provider 封装 | `focusflow/llm.py`, `focusflow/mock_llm.py` |
 | 提示词 | `focusflow/prompts.py` |

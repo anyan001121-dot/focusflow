@@ -139,11 +139,14 @@ def _breakdown(goal_text: str, lang: str = "en", ratio: float | None = None) -> 
 
 
 def _interruption(message: str, lang: str = "en") -> dict:
+    """Mock never proposes "start_new_focus" -- it has no real judgment about
+    urgency, so it always plays it safe. A real LLM is free to propose it;
+    focusflow/policy.py is what actually decides whether that's allowed."""
     if lang == "zh":
-        reason = "Mock 模式下默认把新提到的内容当作独立事项处理；配置 LLM API key 后可做更准确的相关性判断。"
+        reason = "Mock 模式下默认把新提到的内容当作独立事项处理；配置 LLM API key 后可做更准确的判断。"
     else:
         reason = (
-            "Mock mode always treats new mentions as separate items; "
-            "set an LLM API key for context-aware relatedness checks."
+            "Mock mode always plays it safe and files new mentions away; "
+            "set an LLM API key for more nuanced judgment calls."
         )
-    return {"related": False, "reason": reason}
+    return {"action": "capture_to_later", "reason": reason}

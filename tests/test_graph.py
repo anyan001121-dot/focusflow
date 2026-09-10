@@ -5,6 +5,7 @@ import os
 os.environ.pop("ANTHROPIC_API_KEY", None)
 os.environ.pop("OPENAI_API_KEY", None)
 
+from focusflow import graph as graph_module
 from focusflow.graph import build_graph
 from focusflow.state import new_state
 
@@ -51,6 +52,39 @@ def test_interruption_during_focus_mode_does_not_replace_current_task():
     assert result["current_task"] == "Write dissertation discussion"
     assert result["current_step"] == "Open the Discussion section."
     assert "I just remembered I need to buy detergent" in result["later_list"]
+
+
+def test_policy_blocks_agent_even_when_it_insists_on_switching_tasks(monkeypatch):
+    """The proof: the agent is allowed to propose abandoning the current
+    task (see prompts.interruption_system) -- this forces exactly that
+    proposal, regardless of what a real model would say, and asserts
+    focusflow.policy blocks it unconditionally. No amount of prompting
+    changes this outcome, because the guarantee lives in code, not in the
+    model's judgment."""
+    monkeypatch.setattr(
+        graph_module.llm,
+        "complete_json",
+        lambda *a, **k: {"action": "start_new_focus", "reason": "the model insists this is more urgent"},
+    )
+
+    graph = build_graph()
+    state = new_state()
+    state["focus_mode"] = True
+    state["current_task"] = "Write dissertation discussion"
+    state["current_step"] = "Open the Discussion section."
+    state["next_action"] = "Open the Discussion section."
+    state["user_input"] = "actually let's talk about something else entirely"
+
+    result = graph.invoke(state)
+
+    assert result["response"]["proposed_action"] == "start_new_focus"
+    assert result["response"]["enforced_action"] == "capture_to_later"
+    assert result["response"]["policy_downgraded"] is True
+    # The thing that actually matters: state is untouched.
+    assert result["focus_mode"] is True
+    assert result["current_task"] == "Write dissertation discussion"
+    assert result["current_step"] == "Open the Discussion section."
+    assert "actually let's talk about something else entirely" in result["later_list"]
 
 
 def test_done_advances_to_next_queued_step():

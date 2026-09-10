@@ -112,6 +112,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Got it -- sounds related to what you're already doing 👍",
         "zh": "知道啦——看起来和你正在做的事情有关 👍",
     },
+    "policy_kept_on_track": {
+        "en": "🛡️ The agent actually wanted to switch tasks -- a hard rule kept you on '{task}' instead.",
+        "zh": "🛡️ Agent 本来想切换任务——但被一条硬规则拦下来了，继续留在「{task}」上。",
+    },
     "completed_header": {"en": "✅ Done so far ({n})", "zh": "✅ 已经完成（{n}）"},
     "done_button": {"en": "✅ Done with this step!", "zh": "✅ 这一步搞定啦！"},
     "split_button": {
