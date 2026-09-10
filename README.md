@@ -64,7 +64,7 @@ Generic to-do apps make this worse: they reward capturing more, not starting soo
 
 ### Design decisions
 
-A few things worth knowing about how this actually behaves, since they shape what you can expect from it day to day:
+A few design choices that shape how this actually feels to use:
 
 **1. It can reason about an interruption, but it can't argue its way into abandoning your task.** When you say something new mid-task, FocusFlow doesn't just run a rigid script — the model actually looks at what you're doing and what you just said, and picks between a few responses, including, if it genuinely thinks your new message is more urgent, proposing to drop your current task and switch. That proposal always has to clear a separate check (`focusflow/policy.py`) first, and while you're in Focus Mode, "switch tasks" simply isn't on the list of things it's allowed to do — no matter how it argues for it. There's a test ([`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py)) that forces the model to insist on switching anyway, just to make sure the answer holds. So you get real judgment on the small stuff, with a hard floor under the one promise that actually matters: it won't abandon what you're doing.
 
@@ -237,7 +237,7 @@ Without it, every visitor to a shared deployment reads and writes the same local
 
 ### 设计决策
 
-有几件事知道了会让你更明白这东西平时是怎么表现的：
+几个直接影响使用体验的设计：
 
 **1. 它能对打断做出真正的判断，但没法说服自己放弃你的任务。** 你在做任务的时候突然说了点别的，FocusFlow 不是照着死板的脚本走——模型是真的会看你在做什么、你刚说了什么，然后从几个反应里选一个，如果它觉得你说的事真的更紧急，甚至会提议放下手头的任务切换过去。但这个提议永远要先过一道关卡（`focusflow/policy.py`），只要你还在专注模式里，"切换任务"压根不在它能选的范围内——不管它怎么找理由都没用。仓库里有个测试（[`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py)）专门逼着模型坚持要切换，就是为了确认这条底线不会松动。所以你拿到的是：小事上它真的会判断，但唯一那条最重要的承诺——不会把你正在做的事丢下——焊死了。
 
