@@ -64,19 +64,19 @@ Generic to-do apps make this worse: they reward capturing more, not starting soo
 
 ### Design decisions
 
-Written for whoever's reviewing this as a work sample, not just a user:
+A few things worth knowing about how this actually behaves, since they shape what you can expect from it day to day:
 
-**1. Interruption handling is a real agent, and its limits are hard-coded.** FocusFlow's top-level router (`focusflow/graph.py`) is plain code — brain dump, breakdown, and resume are fixed branches. Interruption handling works differently: the LLM looks at the current task and the new message and **proposes** one of three actions, and it's explicitly allowed to propose abandoning the current task if it thinks the new message is urgent enough (`focusflow/prompts.py`). Every proposal has to clear `focusflow/policy.py` first. While `focus_mode` is on, "abandon the active task" simply isn't in the set of allowed outcomes — the model can argue for it all it wants, the answer stays no. [`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py) forces the model to insist on switching and checks that the state doesn't budge. This is Anthropic's own [workflow vs. agent](https://www.anthropic.com/research/building-effective-agents) split in practice: the guarantee lives in code, and the model only gets to make calls that can't break it.
+**1. It can reason about an interruption, but it can't argue its way into abandoning your task.** When you say something new mid-task, FocusFlow doesn't just run a rigid script — the model actually looks at what you're doing and what you just said, and picks between a few responses, including, if it genuinely thinks your new message is more urgent, proposing to drop your current task and switch. That proposal always has to clear a separate check (`focusflow/policy.py`) first, and while you're in Focus Mode, "switch tasks" simply isn't on the list of things it's allowed to do — no matter how it argues for it. There's a test ([`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py)) that forces the model to insist on switching anyway, just to make sure the answer holds. So you get real judgment on the small stuff, with a hard floor under the one promise that actually matters: it won't abandon what you're doing.
 
-**2. The evaluation framework showed up before the LLM output did.** The spec was explicit: don't judge this by whether the responses sound good. So the events log (`focusflow/db.py`) and the personalization loop (`focusflow/service.py`) have been tracking *actual-vs-estimated time* and *breakdown-acceptance rate* since day one — see [Evaluation](#evaluation).
+**2. The numbers it shows you aren't an afterthought.** From the first version, every turn you take has been logged, and FocusFlow has been quietly checking whether its time estimates match how long things actually took you, and whether you end up accepting or asking to re-split the steps it suggests. That's what's behind the Analytics page you can open yourself — see [Evaluation](#evaluation) below.
 
-**3. It runs with zero setup.** A heuristic "mock" LLM (`focusflow/mock_llm.py`) covers the whole loop — brain dump, breakdown, interruption handling — with no API key, just at lower quality. Anyone who clones the repo sees real behavior in thirty seconds instead of after signing up for a key.
+**3. You can see how it actually behaves before you commit to an API key.** A built-in fallback (`focusflow/mock_llm.py`) handles brain dump, breakdown, and interruptions on its own, at lower quality than a real model, but well enough that you can judge the whole loop within thirty seconds of opening it — no signup required first.
 
-**4. Personalization needed two numbers, not a machine-learning pipeline.** The actual/estimated time ratio and the breakdown-rejection rate are enough signal to nudge future step sizing — no fine-tune, no recommender system. A heavier approach would need to earn its keep against the failure surface it adds, and here it wouldn't.
+**4. It learns your pace from two numbers, not a black box.** The more you use it, the more it notices whether you tend to run over your estimates and whether you keep asking for smaller steps — and it leans on that the next time it breaks something down for you. No hidden model retraining on your data, just two plain running averages doing a job that doesn't need more than that.
 
-**5. It's single-user by default, and multi-tenant is one flag away.** Every SQLite row is keyed `"default"` unless `FOCUSFLOW_MULTI_SESSION=true` is set, in which case `focusflow/db.py` keys rows by a per-browser-session id instead. A public demo (strangers sharing one process) and a personal install (one person, state that has to survive restarts) want opposite things from the database, and the flag lets one codebase serve both without the local Resume experience paying for the demo's requirements.
+**5. Your history sticks around locally; a shared copy keeps everyone separate.** Run this for yourself, and your state survives closing the app and coming back — that's what Resume is for. If someone deploys a public copy for strangers to try, one setting (`FOCUSFLOW_MULTI_SESSION=true`) keeps every visitor's data apart instead of everyone reading and writing the same profile. Either way, you get the behavior that matches how you're actually using it.
 
-**6. A failing LLM call degrades instead of crashing the page.** Real provider calls get a bounded timeout and the SDK's own retry/backoff (`focusflow/llm.py`). If a call still fails, or the model's output doesn't parse as JSON, FocusFlow logs a warning and falls back to the same heuristic output a missing API key would produce. The whole pitch here is staying calm and not overwhelming anyone — a stack trace after a rate limit would undercut that far more than a slightly duller suggestion would.
+**6. If the LLM it's talking to has a bad moment, you won't see a crash.** A timeout, a rate limit, a response that doesn't parse — any of that gets caught, logged quietly, and FocusFlow falls back to the same offline suggestion you'd get with no API key at all. A tool whose whole pitch is staying calm shouldn't be the one handing you a stack trace.
 
 <details>
 <summary><strong>Architecture</strong> (click to expand)</summary>
@@ -237,19 +237,19 @@ Without it, every visitor to a shared deployment reads and writes the same local
 
 ### 设计决策
 
-这部分是写给"把这当作作品来评估的人"看的，不只是给用户看的：
+有几件事知道了会让你更明白这东西平时是怎么表现的：
 
-**1. 打断处理是一个真正会拿主意的 Agent，边界写死在代码里。** FocusFlow 顶层的路由（`focusflow/graph.py`）就是普通代码——brain dump、拆解、恢复都是固定分支。打断处理不一样：LLM 会看当前任务和新消息，然后**提议**三个动作之一，而且它被明确允许提议放弃当前任务，只要它判断新消息够紧急（见 `focusflow/prompts.py`）。但每个提议都要先过 `focusflow/policy.py` 这一关。只要专注模式开着，"放弃当前任务"根本不在允许的结果范围内——模型怎么论证都没用，答案就是不行。[`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py) 这个测试专门强迫模型坚持要切换任务，然后检查状态有没有被动摇。这其实就是 Anthropic 自己提出的 [workflow vs. agent](https://www.anthropic.com/research/building-effective-agents) 区分在实际项目里的样子：保证写在代码里，模型只能在不会破坏这个保证的地方做判断。
+**1. 它能对打断做出真正的判断，但没法说服自己放弃你的任务。** 你在做任务的时候突然说了点别的，FocusFlow 不是照着死板的脚本走——模型是真的会看你在做什么、你刚说了什么，然后从几个反应里选一个，如果它觉得你说的事真的更紧急，甚至会提议放下手头的任务切换过去。但这个提议永远要先过一道关卡（`focusflow/policy.py`），只要你还在专注模式里，"切换任务"压根不在它能选的范围内——不管它怎么找理由都没用。仓库里有个测试（[`test_policy_blocks_agent_even_when_it_insists_on_switching_tasks`](tests/test_graph.py)）专门逼着模型坚持要切换，就是为了确认这条底线不会松动。所以你拿到的是：小事上它真的会判断，但唯一那条最重要的承诺——不会把你正在做的事丢下——焊死了。
 
-**2. 评估框架在 LLM 输出之前就先搭好了。** 需求文档写得很直接：不要靠"回复听起来好不好"来评估。所以事件日志（`focusflow/db.py`）和个性化反馈循环（`focusflow/service.py`）从第一天起就在记录*实际用时/预估用时的比例*和*拆解接受率*——详见下面的"评估指标"。
+**2. 你看到的那些数字不是事后补的。** 从第一版起，你的每一轮操作都会被记下来，FocusFlow 一直在悄悄检查它给的时间预估跟你实际花的时间对不对得上、你有没有接受它拆出来的步骤（还是要求再拆一次）。这些就是你自己能打开的 Analytics 页面背后的数据来源——详见下面的"评估指标"。
 
-**3. 零配置就能跑起来。** 内置的启发式"mock" LLM（`focusflow/mock_llm.py`）覆盖了 brain dump、拆解、打断处理这一整套逻辑，不需要 API key，只是质量会打点折扣。谁 clone 了仓库，30 秒内就能看到真实的产品行为，不用先去申请 key。
+**3. 不用先申请 API key，你就能看到它到底怎么运作。** 内置的一个后备方案（`focusflow/mock_llm.py`）自己就能把 brain dump、拆解、打断这一整套跑起来，质量比不上真模型，但足够让你打开的头 30 秒内看懂整个流程——不用先注册什么。
 
-**4. 个性化用两个数字就够了，不需要上机器学习。** 实际/预估用时的比例、拆解被拒绝的频率——这两个数字就足够在下一次拆解时微调步骤大小，不需要微调模型也不需要推荐系统。方案更重带来的准确率提升，得先证明配得上它多背的那些故障风险，这里显然不配。
+**4. 它靠两个数字了解你的节奏，不是靠黑箱。** 你用得越多，它越会留意你是不是经常超出预估时间、是不是老要求把步骤拆得更小——下次给你拆任务时就会照着这个调整。没有什么在后台悄悄用你的数据训练模型，就两个很朴素的滚动平均数，干的活也不需要更复杂的东西。
 
-**5. 默认单用户，多租户只是一个开关的事。** SQLite 里每一行数据默认都用 `"default"` 当 key，设置了 `FOCUSFLOW_MULTI_SESSION=true` 之后，`focusflow/db.py` 就会改成按每个浏览器会话的 id 区分数据。公开 demo（一堆陌生人挤在同一个进程里）和个人本地安装（只有你自己，状态要能跨重启保留）对数据库的要求正好相反，这个开关让同一套代码能伺候好两种场景，本地版的 Resume 体验也不用为公开 demo 的需求让步。
+**5. 你自己用，记录会一直留着；如果是公开分享的版本，每个人的数据会分开。** 你自己在本地跑，关掉再打开，记录还在——这就是"恢复"这个功能的意义。如果有人把它部署成一个给陌生人试用的公开版本，只要开一个设置（`FOCUSFLOW_MULTI_SESSION=true`），每个访客的数据就会分开，不会互相读到对方的东西。不管哪种情况，你拿到的行为都会跟你实际的使用场景对上。
 
-**6. LLM 调用失败了，页面不会跟着崩。** 真实的 API 调用设了超时时间，交给 SDK 自带的重试和退避机制处理（`focusflow/llm.py`）。如果调用还是失败了，或者模型吐出来的内容解析不成 JSON，FocusFlow 会记一条警告日志，然后自动退回成"没配 API key"时的那套启发式输出。这个工具卖的就是"保持冷静、别让人过载"，因为触发了限流就甩一个报错堆栈出来，比给一个稍微逊色点的建议破坏力大得多。
+**6. 就算它连的那个 LLM 状态不好，你也不会看到报错。** 超时、被限流、返回的内容解析不出来——这些情况都会被接住，安静地记一条日志，然后 FocusFlow 会退回成跟没配 API key 时一样的建议。一个卖点是"让你保持冷静"的工具，不该自己先甩一个报错堆栈给你看。
 
 <details>
 <summary><strong>架构</strong>（点击展开）</summary>
