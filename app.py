@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -17,8 +18,9 @@ from focusflow.i18n import LANGUAGES, t, urgency_label
 
 load_dotenv()
 
-st.set_page_config(page_title="FocusFlow", page_icon="assets/logo.svg", layout="wide")
+st.set_page_config(page_title="FocusFlow", page_icon="assets/logo.svg", layout="centered", initial_sidebar_state="collapsed")
 st.logo("assets/logo.svg", size="large")
+st.html(Path(__file__).with_name("assets").joinpath("app.css").read_text())
 
 db.init_db()
 
@@ -37,6 +39,10 @@ lang = state.get("lang", "en")
 def _update(new_state: dict) -> None:
     st.session_state.ff_state = new_state
     st.rerun()
+
+
+def _fill_example(text: str) -> None:
+    st.session_state.brain_dump_input = text
 
 
 @st.fragment(run_every="1s")
@@ -86,8 +92,15 @@ with st.sidebar:
     later_list = state.get("later_list", [])
     st.markdown(f"**{t(lang, 'later_list_header', n=len(later_list))}**")
     if later_list:
-        for item in later_list:
-            st.markdown(f"- {item}")
+        with st.expander(t(lang, "later_review"), expanded=not state.get("focus_mode")):
+            for index, item in enumerate(later_list):
+                st.write(item)
+                if not state.get("focus_mode"):
+                    left, right = st.columns(2)
+                    if left.button(t(lang, "later_start"), key=f"later-start-{index}"):
+                        _update(service.resolve_later(state, index, start=True, session_id=session_id))
+                    if right.button(t(lang, "later_resolved"), key=f"later-resolved-{index}"):
+                        _update(service.resolve_later(state, index, session_id=session_id))
     else:
         st.caption(t(lang, "later_list_empty"))
 
@@ -107,14 +120,13 @@ with st.sidebar:
 # like a narrow strip lost in empty space on larger screens.
 # ---------------------------------------------------------------------------
 
-_gutter_l, main_col, _gutter_r = st.columns([1, 5, 1])
+main_col = st.container()
 
 with main_col:
-    _header_icon, _header_title = st.columns([1, 6], vertical_alignment="center")
-    with _header_icon:
-        st.image("assets/logo.svg", width=80)
-    with _header_title:
-        st.title("FocusFlow")
+    mascot = Path(__file__).with_name("assets").joinpath("logo.svg").read_text()
+    st.html(f'<div class="ff-brand"><span class="ff-seed" aria-hidden="true">{mascot}</span> FocusFlow <span class="ff-brand-note">ONE SMALL STEP</span></div>')
+    if not state.get("focus_mode"):
+        st.caption(t(lang, "product_promise"))
 
     response = state.get("response", {})
     rtype = response.get("type")
@@ -130,14 +142,6 @@ with main_col:
     if rtype == "resume":
         if response.get("has_active_task"):
             st.info(t(lang, "resume_welcome"))
-            st.markdown(t(lang, "resume_you_were", task=response["current_task"]))
-            completed = response.get("completed_steps", [])
-            if completed:
-                st.markdown(t(lang, "resume_completed_header"))
-                for step in completed:
-                    st.markdown(f"- ✅ {step}")
-            st.markdown(t(lang, "resume_next_action", action=response.get("next_action", "")))
-            st.caption(t(lang, "resume_estimated", minutes=response.get("estimated_time", 5)))
         else:
             st.info(t(lang, "resume_nothing"))
 
@@ -169,17 +173,34 @@ with main_col:
     # Focus mode
     # -----------------------------------------------------------------------
 
-    if state.get("focus_mode"):
-        st.divider()
+    if state.get("focus_mode") and state.get("paused_at"):
+        st.info(t(lang, "pause_saved"))
+        st.markdown(t(lang, "focus_goal", goal=state.get("current_goal", "")))
+        with st.container(border=True):
+            st.caption(t(lang, "next_step_label"))
+            st.subheader(state.get("current_step", ""))
+        if state.get("resume_note"):
+            st.write(state["resume_note"])
+        if st.button(t(lang, "return_button"), type="primary", key="return-focus"):
+            _update(service.resume(state, session_id))
+
+    elif state.get("focus_mode"):
         st.subheader(t(lang, "focus_header"))
         st.markdown(t(lang, "focus_goal", goal=state.get("current_goal", "")))
-        st.success(t(lang, "focus_start_here", step=state.get("current_step", "")))
+        with st.container(border=True):
+            st.caption(t(lang, "next_step_label"))
+            st.subheader(state.get("current_step", ""))
+            if state.get("completion_condition"):
+                st.caption(t(lang, "completion_condition", condition=state["completion_condition"]))
+        if state.get("resume_note"):
+            st.caption(t(lang, "return_note", note=state["resume_note"]))
         st.caption(t(lang, "focus_estimated", minutes=state.get("estimated_time", 5)))
-        _focus_timer(state.get("step_start_time", ""), state.get("estimated_time", 5), lang)
+        if st.toggle(t(lang, "show_timer"), value=False, key="show_timer"):
+            _focus_timer(state.get("step_start_time", ""), state.get("estimated_time", 5), lang)
 
         if response.get("type") == "interruption":
             if response.get("captured"):
-                st.warning(t(lang, "interruption_captured"))
+                st.caption(t(lang, "interruption_captured"))
             else:
                 st.caption(t(lang, "interruption_related"))
             if response.get("policy_downgraded"):
@@ -198,16 +219,20 @@ with main_col:
         if st.button(t(lang, "split_button"), use_container_width=True):
             _update(service.split_current_step(state, session_id))
 
-        aside = st.text_input(
-            t(lang, "aside_label"),
-            key="interruption_input",
-            placeholder=t(lang, "aside_placeholder"),
-        )
-        if st.button(t(lang, "send_button")) and aside.strip():
-            _update(service.handle_message(state, aside.strip(), session_id))
+        with st.expander(t(lang, "pause_header")):
+            note = st.text_input(t(lang, "pause_note"), key="pause_note", value=state.get("resume_note", ""))
+        if st.button(t(lang, "pause_button"), key="pause-focus", use_container_width=True):
+            _update(service.pause_focus(state, note, session_id))
+
+        with st.form("capture_thought", clear_on_submit=True, border=False):
+            aside = st.text_input(
+                t(lang, "aside_label"), key="interruption_input",
+                placeholder=t(lang, "aside_placeholder"),
+            )
+            if st.form_submit_button(t(lang, "send_button")) and aside.strip():
+                _update(service.handle_message(state, aside.strip(), session_id))
 
     elif response.get("type") == "task_complete":
-        st.balloons()
         st.success(
             t(
                 lang,
@@ -233,15 +258,21 @@ with main_col:
                     st.session_state.rated_task = task_id
                     st.rerun()
 
-    else:
-        st.divider()
-        st.subheader(t(lang, "whats_on_mind_header"))
-        st.caption(t(lang, "whats_on_mind_caption"))
+    if not state.get("focus_mode"):
+        st.title(t(lang, "whats_on_mind_header"))
+        st.write(t(lang, "whats_on_mind_caption"))
+        with st.expander(t(lang, "example_header")):
+            for key in ("example_study", "example_work", "example_return"):
+                st.button(t(lang, key), key=key, on_click=_fill_example,
+                          args=(t(lang, key),), use_container_width=True)
         dump = st.text_area(
-            "Brain dump",
+            t(lang, "input_label"),
             key="brain_dump_input",
-            label_visibility="collapsed",
-            height=180,
+            placeholder=t(lang, "input_placeholder"),
+            height=140,
         )
-        if st.button(t(lang, "go_button"), type="primary", use_container_width=True) and dump.strip():
-            _update(service.handle_message(state, dump.strip(), session_id))
+        if st.button(t(lang, "go_button"), type="primary", use_container_width=True):
+            if dump.strip():
+                _update(service.handle_message(state, dump.strip(), session_id))
+            st.caption(t(lang, "input_placeholder"))
+        st.caption(t(lang, "start_reassurance"))

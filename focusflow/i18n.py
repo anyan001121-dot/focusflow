@@ -19,44 +19,46 @@ from __future__ import annotations
 LANGUAGES = {"en": "English", "zh": "中文"}
 
 _STRINGS: dict[str, dict[str, str]] = {
+    'input_label': {'en': "What's on your mind?", 'zh': '你想开始做什么？'},
+    'input_placeholder': {'en': 'For example: I need to write my report, but I keep putting it off.', 'zh': '比如：想写论文，但一直没打开文档。'},
+    'example_header': {'en': 'Not sure what to write? Try an example.', 'zh': '不知道写什么？可以从一个例子开始'},
+    'example_study': {'en': 'Start writing my paper', 'zh': '开始写论文'},
+    'example_work': {'en': 'Reply to an email I have been putting off', 'zh': '回复一封拖了很久的邮件'},
+    'example_return': {'en': 'Continue preparing for my interview', 'zh': '接着准备面试'},
+    'start_reassurance': {'en': 'One thing or several thoughts are both welcome. You can pause whenever you need.', 'zh': '写一件事，或把几件事一起放下，都可以。需要的时候，随时暂停。'},
+    'next_step_label': {'en': 'YOUR NEXT SMALL STEP', 'zh': '接下来的一小步'},
+    'show_timer': {'en': 'Show elapsed time', 'zh': '显示已用时间'},
+    'product_promise': {'en': 'A place to start, and somewhere to return to.', 'zh': '给开始留一点空间，也给回来留一个位置。'},
+    'later_review': {'en': 'Review parked thoughts', 'zh': '查看暂存的事情'},
+    'later_start': {'en': 'Start this', 'zh': '开始这件事'},
+    'later_resolved': {'en': 'Handled / not needed', 'zh': '已处理／不需要了'},
+    'completion_condition': {'en': 'This step is done when: {condition}', 'zh': '这一步做到这里就可以：{condition}'},
+    'pause_header': {'en': 'Leave a note for when you return (optional)', 'zh': '给回来时的自己留句话（可选）'},
+    'pause_note': {'en': 'Optional: leave a clue for your return (file, page, next move)', 'zh': '可选：给回来时的自己留句话（文件、页码、下一动作）'},
+    'pause_button': {'en': 'Pause here', 'zh': '先停在这里'},
+    'pause_saved': {'en': "Your place is saved. Come back when you're ready.", 'zh': '已经记住你做到哪里了。准备好了，再回来。'},
+    'return_button': {'en': 'Pick up from here', 'zh': '从这里接着做'},
+    'return_note': {'en': 'Your return note: {note}', 'zh': '你留下的提示：{note}'},
     "disclaimer": {
         "en": "A friendly executive-function helper -- not a medical device, "
         "and it doesn't diagnose or treat ADHD.",
         "zh": "一个友善的执行功能小助手——不是医疗设备，不诊断也不治疗 ADHD。",
     },
-    "llm_backend_label": {
-        "en": "LLM backend: {provider}",
-        "zh": "LLM 后端：{provider}",
-    },
+    'llm_backend_label': {'en': 'Suggestions: {provider}', 'zh': '建议来源：{provider}'},
     "provider_anthropic": {"en": "Anthropic", "zh": "Anthropic"},
     "provider_openai": {"en": "OpenAI", "zh": "OpenAI"},
-    "provider_mock": {
-        "en": "🧪 Practice mode (no API key yet)",
-        "zh": "🧪 练习模式（还没接入 key）",
-    },
+    'provider_mock': {'en': 'Practice mode · template suggestions', 'zh': '练习模式 · 模板建议'},
     "language_label": {"en": "🌐 Language", "zh": "🌐 语言"},
-    "later_list_header": {
-        "en": "🗂️ Later list ({n})",
-        "zh": "🗂️ 稍后列表（{n}）",
-    },
-    "later_list_empty": {
-        "en": "Nothing parked here yet -- nice and clear! ✨",
-        "zh": "这里空空的，很棒！✨",
-    },
-    "resume_button": {
-        "en": "Where was I? (Resume) 🔍",
-        "zh": "我刚才在做什么？（继续）🔍",
-    },
+    'later_list_header': {'en': 'Set aside for later ({n})', 'zh': '先放在这里（{n}）'},
+    'later_list_empty': {'en': 'If another thought comes up, you can leave it here.', 'zh': '想到别的事时，可以先放在这里。'},
+    'resume_button': {'en': 'Where was I? Continue', 'zh': '我刚才做到哪里了？继续'},
     "privacy_header": {"en": "🔒 Privacy", "zh": "🔒 隐私"},
-    "privacy_caption": {
-        "en": "All your data stays right here on your computer, in focusflow.db.",
-        "zh": "你的数据都好好地留在本地的 focusflow.db 文件里。",
-    },
+    'privacy_caption': {'en': 'State and history are stored on the computer/server running this app. With an AI provider connected, task text is sent to that provider. A public demo is not a durable personal workspace.', 'zh': '状态与历史保存在运行应用的电脑或服务器上。接入 AI 服务后，任务文本会发送给该服务商。公开演示不适合长期保存个人任务。'},
     "delete_button": {
         "en": "🗑️ Delete all my data",
         "zh": "🗑️ 删除我的所有数据",
     },
-    "resume_welcome": {"en": "**Hey, welcome back!** 👋", "zh": "**嘿，欢迎回来啦！** 👋"},
+    'resume_welcome': {'en': 'Welcome back! Your next step is right here. 🌱', 'zh': '欢迎回来啦 🌱 刚才的那一步还在。'},
     "resume_you_were": {
         "en": "You were working on: **{task}**",
         "zh": "你刚才在忙：**{task}**",
@@ -79,7 +81,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "thing you want to start.",
         "zh": "你在想什么呀？🌱 可以一口气把几件事都写出来，也可以直接说一件你想开始做的事。",
     },
-    "brain_dump_header": {"en": "Here's the tidy version ✨", "zh": "整理好啦 ✨"},
+    'brain_dump_header': {'en': 'A few things to choose from.', 'zh': '先挑一件就好。'},
     "brain_dump_empty": {
         "en": "Hmm, couldn't spot a clear task in there -- try naming one thing directly.",
         "zh": "嗯……没找到明确的任务，试着直接说一件具体的事吧。",
@@ -88,7 +90,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "urgency: {urgency}",
         "zh": "紧急程度：{urgency}",
     },
-    "start_button": {"en": "Start ✨", "zh": "开始吧 ✨"},
+    'start_button': {'en': 'Start ✨', 'zh': '开始吧 ✨'},
     "later_parked": {
         "en": "Tucked {n} lower-priority thing(s) into the Later list 📥",
         "zh": "已经把 {n} 件优先级较低的事情放进稍后列表啦 📥",
@@ -97,25 +99,19 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "💭 Ideas / not urgent right now ({n})",
         "zh": "💭 想法 / 暂时不用做（{n}）",
     },
-    "focus_header": {"en": "🌟 Focus time", "zh": "🌟 专注时间"},
-    "focus_goal": {"en": "🎯 **Goal:** {goal}", "zh": "🎯 **目标：** {goal}"},
+    'focus_header': {'en': 'Just this step, for now.', 'zh': '眼前，只需要这一步。'},
+    'focus_goal': {'en': "You're working on: **{goal}**", 'zh': '你正在做：**{goal}**'},
     "focus_start_here": {
         "en": "👉 **Start here:** {step}",
         "zh": "👉 **从这里开始：** {step}",
     },
-    "focus_estimated": {"en": "~{minutes} min", "zh": "约 {minutes} 分钟"},
-    "interruption_captured": {
-        "en": "Tucked away for later 📥 Back to what you're doing above.",
-        "zh": "已经收进稍后列表啦 📥 回到上面继续吧。",
-    },
+    'focus_estimated': {'en': 'About {minutes} min · a guide, not a deadline', 'zh': '大约 {minutes} 分钟 · 只是参考，不是倒计时'},
+    'interruption_captured': {'en': 'Saved for later. Your current step is still here.', 'zh': '已经记下来了。正在做的这一步还在这里。'},
     "interruption_related": {
         "en": "Got it -- sounds related to what you're already doing 👍",
         "zh": "知道啦——看起来和你正在做的事情有关 👍",
     },
-    "policy_kept_on_track": {
-        "en": "🛡️ The agent actually wanted to switch tasks -- a hard rule kept you on '{task}' instead.",
-        "zh": "🛡️ Agent 本来想切换任务——但被一条硬规则拦下来了，继续留在「{task}」上。",
-    },
+    'policy_kept_on_track': {'en': 'Your current step is saved. Use Pause if you need to handle something urgent.', 'zh': '当前步骤已保留。如果需要处理急事，可以使用暂停。'},
     "llm_fallback_notice": {
         "en": "⚠️ The connected LLM had a hiccup just now, so this suggestion came from practice mode instead.",
         "zh": "⚠️ 刚才连接的 LLM 出了点小状况，这条建议是练习模式给出的。",
@@ -128,63 +124,32 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "❌ Your API key looks invalid or expired, so this suggestion came from practice mode instead. Check the **Setup** page in the sidebar.",
         "zh": "❌ 你的 API key 好像失效了或者不对，这条建议是练习模式给出的。去侧边栏的 **Setup** 页面看看。",
     },
-    "completed_header": {"en": "✅ Done so far ({n})", "zh": "✅ 已经完成（{n}）"},
-    "done_button": {"en": "✅ Done with this step!", "zh": "✅ 这一步搞定啦！"},
-    "split_button": {
-        "en": "Still too big? Let's split it 🧩",
-        "zh": "还是有点大，再拆小一点吧 🧩",
-    },
+    'completed_header': {'en': "Steps you've taken ({n})", 'zh': '已经走过的小步骤（{n}）'},
+    'done_button': {'en': '✅ Done with this step!', 'zh': '✅ 这一步搞定啦！'},
+    'split_button': {'en': 'This feels too big. Make it smaller.', 'zh': '这一步还有点难，再小一点'},
     "step_split_notice": {
         "en": "Broke that into something smaller for you 🧩",
         "zh": "已经帮你拆成更小的一步啦 🧩",
     },
-    "timer_elapsed": {"en": "⏱️ Elapsed: {mmss}", "zh": "⏱️ 已用时：{mmss}"},
-    "timer_over_estimate": {
-        "en": "🌤️ Past the ~{minutes} min estimate -- totally normal, keep going "
-        "or mark done whenever.",
-        "zh": "🌤️ 已经超过约 {minutes} 分钟的预估——很正常，继续做，或者觉得可以了就点完成。",
-    },
-    "cognitive_load_prompt": {
-        "en": "How did that feel? 💭",
-        "zh": "刚才感觉怎么样？💭",
-    },
-    "cognitive_load_easy": {"en": "😌 Easy", "zh": "😌 轻松"},
-    "cognitive_load_okay": {"en": "😐 Okay", "zh": "😐 还好"},
-    "cognitive_load_hard": {"en": "😣 Hard", "zh": "😣 费劲"},
-    "cognitive_load_thanks": {
-        "en": "Got it, thanks for sharing! 💛",
-        "zh": "记下啦，谢谢你告诉我！💛",
-    },
-    "aside_label": {
-        "en": "Anything else popping into your head? 💭",
-        "zh": "现在脑子里还蹦出别的事情吗？💭",
-    },
-    "aside_placeholder": {
-        "en": "e.g. I just remembered I need to buy detergent",
-        "zh": "比如：我突然想起要买洗衣液",
-    },
-    "send_button": {"en": "Send 💌", "zh": "发送 💌"},
-    "task_complete_message": {
-        "en": "Yay! You finished '{task}' in {steps} step(s) 🎉",
-        "zh": "太棒啦！完成了「{task}」，一共 {steps} 步 🎉",
-    },
-    "whats_on_mind_header": {"en": "What's on your mind? 🌱", "zh": "你在想什么呀？🌱"},
-    "whats_on_mind_caption": {
-        "en": "Dump it all out messily, or just name one thing you want to start right now.",
-        "zh": "把想到的事情随便写出来，或者直接说一件你现在想开始的事。",
-    },
-    "go_button": {"en": "Let's go ✨", "zh": "出发咯 🌈"},
+    'timer_elapsed': {'en': 'Time since starting: {mmss}', 'zh': '开始后经过：{mmss}'},
+    'timer_over_estimate': {'en': 'Past the ~{minutes} min estimate. The estimate is only a guide; take a break or split the step if helpful.', 'zh': '已超过约 {minutes} 分钟的预估。预估仅供参考；可以暂停，也可以再拆小一点。'},
+    'cognitive_load_prompt': {'en': "If you'd like: how did those steps feel?", 'zh': '如果愿意，可以告诉我：刚才这几步做起来怎么样？'},
+    'cognitive_load_easy': {'en': 'Manageable', 'zh': '做得动'},
+    'cognitive_load_okay': {'en': 'Some effort', 'zh': '有点费力'},
+    'cognitive_load_hard': {'en': 'Too much', 'zh': '还是太难'},
+    'cognitive_load_thanks': {'en': 'Noted. Thank you for telling me.', 'zh': '记下了，谢谢你告诉我。'},
+    'aside_label': {'en': 'Something else on your mind?', 'zh': '又想起了别的事？'},
+    'aside_placeholder': {'en': "Leave a few words here so you don't have to hold onto them.", 'zh': '写下来，就不用一直惦记着。'},
+    'send_button': {'en': 'Save for later', 'zh': '先记下来'},
+    'task_complete_message': {'en': "You finished this set of {steps} steps for '{task}'. This may be one part of the larger task.", 'zh': '你完成了「{task}」这一轮的 {steps} 个小步骤。较大的任务可能还需要继续。'},
+    'whats_on_mind_header': {'en': "Let's make room for one thing.", 'zh': '现在，先照顾眼前这一件事。'},
+    'whats_on_mind_caption': {'en': "You may know what needs doing and still find it hard to begin. Write a few words. They don't need to be organized.", 'zh': '知道要做什么，也可能还是开始不了。先写几个字就好，不用想清楚，也不用整理好。'},
+    'go_button': {'en': "Let's go ✨", 'zh': '出发咯 🌈'},
     "analytics_title": {"en": "📊 Analytics", "zh": "📊 分析看板"},
-    "analytics_caption": {
-        "en": "A cozy little peek at your own local usage -- not a diagnostic tool.",
-        "zh": "一个温馨的本地小看板，看看自己的使用情况——不是诊断工具。",
-    },
-    "metric_north_star": {
-        "en": "Successful task starts (7d)",
-        "zh": "近7天成功启动任务次数",
-    },
-    "metric_completion_rate": {"en": "Task completion rate", "zh": "任务完成率"},
-    "metric_abandonment_rate": {"en": "Abandonment rate", "zh": "放弃率"},
+    'analytics_caption': {'en': 'Local usage records, not proof of real-world task completion. Time includes unpaused time away; uncompleted sets may still be in progress.', 'zh': '这些是使用记录，不代表现实任务已经完成。用时包含未暂停的离开时间；未完成的轮次也可能仍在进行。'},
+    'metric_north_star': {'en': 'Completed step sets (7d)', 'zh': '近 7 天完成的小步骤轮次'},
+    'metric_completion_rate': {'en': 'Completed sets / generated sets', 'zh': '完成轮次／生成轮次'},
+    'metric_abandonment_rate': {'en': 'Sets not recorded complete', 'zh': '未记录完成的轮次占比'},
     "metric_acceptance_rate": {
         "en": "Breakdown acceptance rate",
         "zh": "拆解接受率",
@@ -200,17 +165,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Not much data yet -- go use the app a little, then come back! 🌱",
         "zh": "数据还不多——先去用一下 app，再回来看看吧！🌱",
     },
-    "setup_title": {
-        "en": "⚙️ Let's connect a real LLM ✨",
-        "zh": "⚙️ 一起接入真实 LLM 吧 ✨",
-    },
-    "setup_intro": {
-        "en": "FocusFlow comes with a cozy little \"practice mode\" built in "
-        "(see focusflow/mock_llm.py) so there's something to try right away. "
-        "For the real task-breakdown magic, connect an Anthropic or OpenAI API key.",
-        "zh": "FocusFlow 自带一个可爱的\"练习模式\"（见 focusflow/mock_llm.py），"
-        "让你马上就能试用。想要真正聪明的任务拆解，需要接入 Anthropic 或 OpenAI 的 API key。",
-    },
+    'setup_title': {'en': 'Connect an AI provider', 'zh': '接入 AI 建议'},
+    'setup_intro': {'en': 'Practice mode lets you try the flow without an API key. Its suggestions use templates and may not fit your task. To get suggestions from an AI provider, configure a key below.', 'zh': '不用 API key 也可以先体验流程。练习模式使用模板，建议可能不贴合你的任务。需要模型生成建议时，再按下面的说明接入。'},
     "setup_order_note": {
         "en": "Tick these off in whatever order feels right -- none of them depend on each other. 🌈",
         "zh": "按你喜欢的顺序打勾就好——它们互相都不依赖。🌈",
@@ -273,3 +229,4 @@ def t(lang: str, key: str, **kwargs) -> str:
 def urgency_label(lang: str, urgency: str) -> str:
     entry = _URGENCY_LABELS.get(urgency, {})
     return entry.get(lang, entry.get("en", urgency))
+

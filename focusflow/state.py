@@ -33,6 +33,9 @@ class FocusFlowState(TypedDict, total=False):
     current_step: str
     next_action: str
     estimated_time: int
+    completion_condition: str
+    paused_at: str
+    resume_note: str
 
     # queues
     task_queue: list[Step]
@@ -76,6 +79,9 @@ def new_state() -> FocusFlowState:
         current_step="",
         next_action="",
         estimated_time=0,
+        completion_condition="",
+        paused_at="",
+        resume_note="",
         task_queue=[],
         later_list=[],
         completed_steps=[],

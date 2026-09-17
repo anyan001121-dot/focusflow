@@ -14,5 +14,5 @@ def test_every_urgency_label_has_all_languages():
 
 
 def test_t_formats_placeholders():
-    assert t("en", "focus_estimated", minutes=5) == "~5 min"
-    assert t("zh", "focus_estimated", minutes=5) == "约 5 分钟"
+    assert t("en", "focus_estimated", minutes=5) == "About 5 min · a guide, not a deadline"
+    assert t("zh", "focus_estimated", minutes=5) == "大约 5 分钟 · 只是参考，不是倒计时"

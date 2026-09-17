@@ -1,40 +1,21 @@
-# FocusFlow's warm, cozy visual theme. See references/theme.md for the
-# full option set -- kept here as native Streamlit theming rather than
-# custom CSS, so it applies consistently and survives Streamlit upgrades.
-
+# Quiet, readable colors; system fonts avoid external font requests.
 [theme]
 base = "light"
-primaryColor = "#E8607A"
-backgroundColor = "#FFFBF5"
-secondaryBackgroundColor = "#FFEFE3"
-textColor = "#4A3B36"
-linkColor = "#E8607A"
-borderColor = "#F3DCCB"
-
-greenColor = "#6FCF97"
-redColor = "#EB5757"
-orangeColor = "#F2A65A"
-yellowColor = "#F2C94C"
-blueColor = "#6FA8DC"
-violetColor = "#C58AC5"
-
-chartCategoricalColors = ["#E8607A", "#F2A65A", "#6FCF97", "#6FA8DC", "#C58AC5", "#F2C94C", "#B08968"]
-
-font = "Nunito:https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap"
-headingFont = "'Baloo 2':https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&display=swap"
-baseFontSize = 18
-baseFontWeight = 500
-headingFontSizes = ["44px", "32px", "26px", "22px", "19px", "17px"]
-headingFontWeights = [700, 700, 600, 600, 600, 600]
-
+primaryColor = "#A83C58"
+backgroundColor = "#FFFBF7"
+secondaryBackgroundColor = "#FFF0E7"
+textColor = "#493D39"
+linkColor = "#A83C58"
+borderColor = "#E6D9CE"
+font = "sans serif"
+baseFontSize = 17
 baseRadius = "large"
-buttonRadius = "full"
+buttonRadius = "large"
 showWidgetBorder = true
-showSidebarBorder = false
+showSidebarBorder = true
 
 [theme.sidebar]
-backgroundColor = "#FFF1E9"
-secondaryBackgroundColor = "#FFE3EA"
-textColor = "#4A3B36"
-primaryColor = "#E8607A"
-borderColor = "#F3DCCB"
+backgroundColor = "#FFF3EA"
+secondaryBackgroundColor = "#F9E7DD"
+textColor = "#493D39"
+primaryColor = "#A83C58"

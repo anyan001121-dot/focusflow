@@ -2,43 +2,28 @@
 layout: default
 ---
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/anyan001121-dot/focusflow/main/assets/logo.svg" width="96" alt="FocusFlow mascot" />
-</p>
+# FocusFlow
 
-**FocusFlow optimizes for starting, not planning.** It's a small, deliberately bounded AI agent for ADHD-style task-initiation friction — not a chatbot with a to-do list bolted on, and not a medical device.
+**开始不了时，先找一小步。被打断以后，留一个能回来的地方。**
 
-<p align="center">
-  <a href="https://focusflow-j2gkquxeg2cifcxmyqxw8w.streamlit.app/"><strong>Try it live →</strong></a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/anyan001121-dot/focusflow"><strong>View source on GitHub</strong></a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/anyan001121-dot/focusflow#中文"><strong>中文说明</strong></a>
-</p>
+文档开了很久，第一句话还没写；好不容易开始，又被一条消息带走。FocusFlow 想在这些时刻帮一点忙：写下眼前的事，看一个下一步，需要离开时保存位置。
 
-## What it does
+你不用把想法整理好才来，也不需要先证明自己能坚持。
 
-- **Brain Dump** — dump everything messily; get back at most three clear priorities, with the rest quietly parked.
-- **Breakdown** — a vague goal becomes one concrete step you can start in 2–5 minutes, never a full plan.
-- **Focus Mode** — one goal, one step, a live elapsed-time readout.
-- **Interruption capture** — a new thought mid-task gets filed to a Later list instead of taking over — a lightweight prospective-memory system, not a distraction bin.
-- **Resume** — coming back shows only what's done, what's current, and what's next.
+[在线体验](https://focusflow-j2gkquxeg2cifcxmyqxw8w.streamlit.app/) · [README 与源代码](https://github.com/anyan001121-dot/focusflow) · [使用前与使用后](before-after.md)
 
-![Brain Dump screen showing three prioritized cards with a Start button on each](https://raw.githubusercontent.com/anyan001121-dot/focusflow/main/docs/screenshots/02_brain_dump_result.png)
+## 可以怎样用？
 
-## Why it's built this way
+- **开始：** 写一句要做的事，先看一个小步骤和完成标准。
+- **暂存：** 想起另一件事，先记下来，保留眼前的步骤。
+- **暂停：** 可选地留一句提示，回来时从原处继续。
 
-FocusFlow's router is a small, code-defined [LangGraph](https://github.com/langchain-ai/langgraph) workflow — but interruption handling is a genuine, *bounded* agent: the LLM can propose abandoning the current task, and a deterministic policy layer (`focusflow/policy.py`) is what actually decides whether that's ever allowed. It isn't, while you're in Focus Mode — no matter how the model argues for it. That guarantee is backed by a test that forces the model to insist on switching anyway and checks the state doesn't budge.
+这些是功能描述，不是效果保证。练习模式使用模板，建议可能不贴合你的情况。计时按需显示，没有连续打卡要求。
 
-The full write-up — problem framing, every design decision and why, architecture, evaluation methodology, and screenshots of every screen — lives in the [README](https://github.com/anyan001121-dot/focusflow#readme).
+## A small next step. A place to come back to.
 
-## Try it
+For study or work that feels hard to start, FocusFlow offers one suggested step, a place to park another thought, and a saved point to return to after a break. You can use only the parts that help.
 
-```bash
-git clone https://github.com/anyan001121-dot/focusflow
-cd focusflow
-pip install -r requirements.txt
-streamlit run app.py
-```
+Practice mode uses templates. Local single-user mode saves your place on the machine running the app; public demo sessions are temporary. Connected AI providers receive task text. FocusFlow does not diagnose or treat ADHD.
 
-No API key required to start — FocusFlow runs on a heuristic practice-mode backend out of the box. See the [README](https://github.com/anyan001121-dot/focusflow#connecting-a-real-llm) for connecting Anthropic or OpenAI.
+[Setup, privacy and development](development.md) · [Scenario comparison / 场景对比](before-after.md)

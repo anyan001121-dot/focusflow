@@ -16,6 +16,8 @@ never needs to pass it.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from . import db
 from .graph import build_graph
 from .state import FocusFlowState, new_state
@@ -113,6 +115,8 @@ def handle_message(
     state: FocusFlowState, user_input: str, session_id: str | None = None
 ) -> FocusFlowState:
     """Free-text turn: router classifies intent from the text and focus_mode."""
+    if state.get("paused_at"):
+        return state
     return _run(state, user_input, session_id=session_id)
 
 
@@ -120,20 +124,61 @@ def start_focus(
     state: FocusFlowState, goal: str, session_id: str | None = None
 ) -> FocusFlowState:
     """UI shortcut: user picked a goal to start now (e.g. from Brain Dump priorities)."""
+    if state.get("focus_mode") or not goal.strip():
+        return state
     return _run(state, goal, intent="new_task", session_id=session_id)
 
 
 def mark_step_done(state: FocusFlowState, session_id: str | None = None) -> FocusFlowState:
+    if not state.get("focus_mode") or state.get("paused_at"):
+        return state
     return _run(state, "done", intent="continue_focus", session_id=session_id)
 
 
 def split_current_step(state: FocusFlowState, session_id: str | None = None) -> FocusFlowState:
     """UI shortcut: "this step is still too big" -- ask for a smaller one."""
+    if not state.get("focus_mode") or state.get("paused_at"):
+        return state
     return _run(state, state.get("current_step", ""), intent="split_step", session_id=session_id)
 
 
 def resume(state: FocusFlowState, session_id: str | None = None) -> FocusFlowState:
+    if state.get("paused_at"):
+        state = dict(state)
+        now = datetime.now(timezone.utc)
+        paused = datetime.fromisoformat(state["paused_at"])
+        started = state.get("step_start_time")
+        if started:
+            state["step_start_time"] = (datetime.fromisoformat(started) + (now - paused)).isoformat()
+        state["paused_at"] = ""
     return _run(state, "resume", intent="resume", session_id=session_id)
+
+
+def pause_focus(state: FocusFlowState, note: str = "", session_id: str | None = None) -> FocusFlowState:
+    """Keep the exact return point; an explicit break is not task abandonment."""
+    if not state.get("focus_mode") or state.get("paused_at"):
+        return state
+    updated = dict(state)
+    updated.update(paused_at=datetime.now(timezone.utc).isoformat(), resume_note=note.strip(),
+                   response={"type": "paused"})
+    db.save_state(updated, session_id=session_id)
+    db.log_event("pause", {}, session_id=session_id)
+    return updated
+
+
+def resolve_later(state: FocusFlowState, index: int, start: bool = False,
+                  session_id: str | None = None) -> FocusFlowState:
+    """Review parked items only outside an active (including paused) task."""
+    items = list(state.get("later_list", []))
+    if state.get("focus_mode") or not 0 <= index < len(items):
+        return state
+    item = items.pop(index)
+    updated = dict(state, later_list=items)
+    if start:
+        return start_focus(updated, item, session_id)
+    db.save_state(updated, session_id=session_id)
+    db.log_event("later_resolved", {}, session_id=session_id)
+    return updated
 
 
 def reset_all(session_id: str | None = None) -> FocusFlowState:

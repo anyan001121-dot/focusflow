@@ -14,6 +14,7 @@ os.environ.pop("OPENAI_API_KEY", None)
 from streamlit.testing.v1 import AppTest
 
 from focusflow import db
+from focusflow.i18n import t
 
 _ROOT = Path(__file__).parent.parent
 _APP = str(_ROOT / "app.py")
@@ -63,20 +64,20 @@ def test_full_click_through_brain_dump_to_split_to_done(tmp_path, monkeypatch):
     ).run()
     assert not at.exception
 
-    go = [b for b in at.get("button") if "Let's go" in _label(b)][0]
+    go = [b for b in at.get("button") if _label(b) == t("en", "go_button")][0]
     go.click().run()
     assert not at.exception
 
-    start = [b for b in at.get("button") if "Start" in _label(b)][0]
+    start = [b for b in at.get("button") if _label(b) == t("en", "start_button")][0]
     start.click().run()
     assert not at.exception
-    assert any("split it" in _label(b) for b in at.get("button"))
+    assert any(_label(b) == t("en", "split_button") for b in at.get("button"))
 
-    split = [b for b in at.get("button") if "split it" in _label(b)][0]
+    split = [b for b in at.get("button") if _label(b) == t("en", "split_button")][0]
     split.click().run()
     assert not at.exception
 
-    done = [b for b in at.get("button") if "Done with this step" in _label(b)][0]
+    done = [b for b in at.get("button") if _label(b) == t("en", "done_button")][0]
     done.click().run()
     assert not at.exception
 

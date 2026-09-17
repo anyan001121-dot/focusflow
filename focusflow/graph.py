@@ -148,6 +148,9 @@ def breakdown_node(state: FocusFlowState) -> dict:
         "current_step": first["action"],
         "next_action": first["action"],
         "estimated_time": first.get("estimated_minutes", 5),
+        "completion_condition": first.get("completion_condition", ""),
+        "paused_at": "",
+        "resume_note": "",
         "task_queue": next_steps,
         "completed_steps": [],
         "focus_mode": True,
@@ -226,6 +229,7 @@ def continue_focus_node(state: FocusFlowState) -> dict:
             "current_step": nxt["action"],
             "next_action": nxt["action"],
             "estimated_time": nxt.get("estimated_minutes", 5),
+            "completion_condition": nxt.get("completion_condition", ""),
             "step_start_time": now,
             "response": {
                 "type": "step_advance",
@@ -245,6 +249,9 @@ def continue_focus_node(state: FocusFlowState) -> dict:
         "completed_steps": completed,
         "focus_mode": False,
         "current_step": "",
+        "completion_condition": "",
+        "paused_at": "",
+        "resume_note": "",
         "next_action": "",
         "step_start_time": "",
         "session_summary": summary,
@@ -277,6 +284,7 @@ def split_step_node(state: FocusFlowState) -> dict:
         "current_step": first["action"],
         "next_action": first["action"],
         "estimated_time": first.get("estimated_minutes", 5),
+        "completion_condition": first.get("completion_condition", ""),
         "task_queue": new_queue,
         "breakdown_was_split": True,
         "step_start_time": _now(),
@@ -291,7 +299,7 @@ def split_step_node(state: FocusFlowState) -> dict:
 
 
 def resume_node(state: FocusFlowState) -> dict:
-    if not state.get("current_task"):
+    if not state.get("current_task") or not state.get("current_step"):
         return {
             "response": {
                 "type": "resume",
