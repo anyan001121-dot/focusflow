@@ -98,34 +98,27 @@ def _breakdown(goal_text: str, lang: str = "en", ratio: float | None = None) -> 
         else:
             action = f"Open whatever you need for '{goal_text.strip()}' and look at just the first item."
 
-    if lang == "zh":
-        completion_condition = "你已经能在屏幕上看到内容了。"
-        next_steps = [
-            {
-                "action": "找出下一步最小的一个具体细节。",
-                "estimated_minutes": _scaled_minutes(5, ratio),
-                "completion_condition": "你已经说出了一件具体要做的事。",
-            },
-            {
-                "action": "只做那一件事，先不打磨、不完善其他部分。",
-                "estimated_minutes": _scaled_minutes(10, ratio),
-                "completion_condition": "那件事做完了，不完美也没关系。",
-            },
-        ]
+    completion_condition = "你已经能在屏幕上看到内容了。" if lang == "zh" else "You can see the content on screen."
+
+    # Offline suggestions still lead to a visible output rather than an abstract decision.
+    if any(w in low for w in ["论文", "thesis", "dissertation", "report", "报告", "olist", "readme"]):
+        pairs = [("写下一句这一节想说明的结论，不用润色。", "Write one rough sentence stating this section's main point.", "文档里多了一句草稿。", "One draft sentence is in the document."),
+                 ("在这句话下面补一条已有的数据或例子；不确定的地方标记待查。", "Add one available fact or example below it; mark anything uncertain for checking.", "结论下面有一条依据或待查标记。", "There is one supporting fact or a check-needed marker.")]
+    elif any(w in low for w in ["邮件", "email", "reply"]):
+        pairs = [("写下一句回复，先回答对方的一个问题，不发送。", "Draft one sentence answering one question; don't send it yet.", "回复框里有一句草稿。", "One reply sentence is drafted."),
+                 ("核对这句回复里的名字和日期，把不确定的地方标出来。", "Check names and dates in that sentence; mark anything uncertain.", "这一句的信息已核对或标记。", "The sentence has been checked or flagged.")]
+    elif any(w in low for w in ["面试", "interview", "简历", "cv", "resume"]):
+        pairs = [("写下一个相关项目：你做了什么，用一句话就好。", "Write one sentence about what you did in a relevant project.", "有一句描述自己行动的草稿。", "One sentence describes your own action."),
+                 ("给这句话补一个能核实的结果，没有数字也可以。", "Add one verifiable outcome; a number is optional.", "草稿包含行动和结果。", "The draft contains an action and an outcome.")]
     else:
-        completion_condition = "You can see the content on screen and are looking at it."
-        next_steps = [
-            {
-                "action": "Identify the single smallest next detail to act on.",
-                "estimated_minutes": _scaled_minutes(5, ratio),
-                "completion_condition": "You have named one concrete thing to do next.",
-            },
-            {
-                "action": "Do that one thing, without editing or polishing anything else.",
-                "estimated_minutes": _scaled_minutes(10, ratio),
-                "completion_condition": "That one thing is done, imperfect is fine.",
-            },
-        ]
+        pairs = [("写下一句：这件事完成后，我会看到什么？", "Write one sentence describing what will exist when this is done.", "有一句具体的完成描述。", "One concrete outcome is written down."),
+                 ("在这句话下面写出已有的一项材料，以及还缺的一项材料。", "Under that sentence, list one resource you have and one you still need.", "已有和缺少的材料各写了一项。", "One available and one missing resource are listed.")]
+    next_steps = [{"action": zh if lang == "zh" else en,
+                   "completion_condition": zdone if lang == "zh" else edone,
+                   "estimated_minutes": _scaled_minutes(5, ratio)}
+                  for zh, en, zdone, edone in pairs]
+    if any(w in low for w in ["健身", "gym", "workout", "运动"]):
+        completion_condition = "已经换好运动服。" if lang == "zh" else "Your workout clothes are on."
 
     return {
         "task_title": goal_text.strip(),
@@ -150,3 +143,4 @@ def _interruption(message: str, lang: str = "en") -> dict:
             "set an LLM API key for more nuanced judgment calls."
         )
     return {"action": "capture_to_later", "reason": reason}
+

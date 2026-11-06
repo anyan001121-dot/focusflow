@@ -111,3 +111,10 @@ Local data is stored on the machine running the app. If an AI provider is config
 If you try it, useful feedback is very concrete: **What were you trying to do? Which step helped you act, or made you stop?** You don't need to share private task content or medical information.
 
 [MIT license](LICENSE)
+
+
+## 最新更新 / Latest update
+
+新增待接回任务、步骤编辑与撤销、卡住时的准备动作，以及进度文件备份恢复。界面采用统一的矢量插画与线性图标。详见 [2026-11-06 更新说明](docs/release-2026-11-06.md)。
+
+Added parked tasks, editable steps, undo, prerequisite actions, and portable return files. The interface now uses consistent vector artwork and line icons. Return files are manual backups, not automatic cloud sync.

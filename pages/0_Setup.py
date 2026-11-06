@@ -17,7 +17,7 @@ import streamlit as st
 from focusflow import db, service
 from focusflow.i18n import t
 
-st.set_page_config(page_title="FocusFlow -- Setup", page_icon="⚙️", layout="centered")
+st.set_page_config(page_title="FocusFlow -- Setup", page_icon="assets/logo.svg", layout="centered")
 
 db.init_db()
 
@@ -64,3 +64,4 @@ st.markdown(
 st.divider()
 st.subheader(t(lang, "for_others_header"))
 st.caption(t(lang, "for_others_body"))
+

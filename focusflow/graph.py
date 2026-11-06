@@ -76,11 +76,11 @@ def classify_intent(state: FocusFlowState) -> str:
     if not text:
         return "clarify"
 
-    if any(w in low for w in _RESUME_WORDS):
+    if low in _RESUME_WORDS:
         return "resume"
 
     if state.get("focus_mode"):
-        if any(w in low for w in _DONE_WORDS):
+        if low in _DONE_WORDS:
             return "continue_focus"
         return "interruption"
 
@@ -273,7 +273,10 @@ def split_step_node(state: FocusFlowState) -> dict:
     ratio = state.get("estimate_ratio") or None
     current = state.get("current_step", "")
     result = llm.complete_json(
-        prompts.breakdown_system(lang), current, task="breakdown", lang=lang, ratio=ratio
+        prompts.breakdown_system(lang, "Split only the current step; preserve the goal and do not repeat completed work. "
+                                + "Goal: " + state.get("current_goal", "")
+                                + "; Completed: " + str(state.get("completed_steps", []))),
+        current, task="breakdown", lang=lang, ratio=ratio
     )
     llm_fallback = _pop_fallback_reason(result)
     first = result["first_step"]

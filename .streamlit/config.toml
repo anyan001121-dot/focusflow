@@ -10,7 +10,6 @@ borderColor = "#E6D9CE"
 font = "sans serif"
 baseFontSize = 17
 baseRadius = "large"
-buttonRadius = "large"
 showWidgetBorder = true
 showSidebarBorder = true
 

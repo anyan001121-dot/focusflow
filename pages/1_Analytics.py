@@ -16,7 +16,7 @@ import streamlit as st
 from focusflow import db, service
 from focusflow.i18n import t
 
-st.set_page_config(page_title="FocusFlow -- Analytics", page_icon="📊", layout="centered")
+st.set_page_config(page_title="FocusFlow -- Analytics", page_icon="assets/logo.svg", layout="centered")
 
 db.init_db()
 
@@ -113,3 +113,4 @@ st.divider()
 st.subheader(t(lang, "section_activity"))
 activity_counts = Counter(e["event_type"] for e in events)
 st.bar_chart(dict(activity_counts))
+

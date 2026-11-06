@@ -40,7 +40,9 @@ Given a goal or task description, produce:
 1. A single first step that could realistically be started within 2-5 minutes. \
 It must be concrete and observable (e.g. "open the document", "highlight one line") \
 -- never vague verbs like "work on", "study", "prepare".
-2. Two optional follow-up steps (also concrete, small).
+2. Two optional follow-up steps that produce a small usable output, not just preparation.
+Do not ask the user to identify the next smallest step: supply that concrete action.
+Respect completed work and the original goal when context is supplied.
 Each step needs: action, estimated_minutes (integer), completion_condition \
 (how the person will know the step is done).
 
@@ -96,3 +98,4 @@ def interruption_system(lang: str = "en") -> str:
 BRAIN_DUMP_SYSTEM = brain_dump_system("en")
 BREAKDOWN_SYSTEM = breakdown_system("en")
 INTERRUPTION_SYSTEM = interruption_system("en")
+

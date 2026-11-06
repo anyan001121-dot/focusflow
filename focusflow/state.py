@@ -37,6 +37,9 @@ class FocusFlowState(TypedDict, total=False):
     paused_at: str
     resume_note: str
 
+    parked_tasks: list[dict]
+    undo_snapshot: dict
+
     # queues
     task_queue: list[Step]
     later_list: list[str]

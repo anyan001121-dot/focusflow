@@ -67,7 +67,7 @@ def test_chinese_pause_return_and_next_task_ui(tmp_path, monkeypatch):
     at.text_area(key="brain_dump_input").set_value("写论文").run()
     next(b for b in at.button if b.label == t("zh", "go_button")).click().run()
     assert not at.exception
-    assert any("这一步做到这里" in c.value for c in at.caption)
+    assert any("这一步做到这里" in c.value for c in at.markdown)
     at.text_input(key="pause_note").set_value("结果章节第 2 段").run()
     at.button(key="pause-focus").click().run()
     assert at.session_state["ff_state"]["paused_at"]
