@@ -93,5 +93,15 @@ def test_language_switch_and_privacy_reset(tmp_path, monkeypatch):
     assert any("继续" in _label(b) for b in at.get("button"))
 
     delete_btn = [b for b in at.get("button") if "删除" in _label(b)][0]
+    assert delete_btn.disabled
+    saved_before_confirmation = db.load_state()
+    assert saved_before_confirmation is not None
+    next(c for c in at.checkbox if c.label == "我确认清空任务、暂存和使用记录").check().run()
+    assert db.load_state() == saved_before_confirmation
+    delete_btn = next(b for b in at.button if "删除" in b.label)
+    assert not delete_btn.disabled
     delete_btn.click().run()
     assert not at.exception
+    assert db.load_state() is None
+    assert db.get_events() == []
+    assert not at.session_state["ff_state"]["focus_mode"]
