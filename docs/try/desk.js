@@ -9,14 +9,14 @@ try {
   $("notice").textContent = "无法读取保存的进度。";
 }
 
-function commit(message = "") {
+function commit(message, updateView = render) {
   try {
     localStorage.setItem(storageKey, JSON.stringify(state));
     $("notice").textContent = message;
   } catch {
     $("notice").textContent = "浏览器无法保存进度，关闭页面后可能丢失。";
   }
-  render();
+  updateView();
 }
 
 function render() {
@@ -36,6 +36,10 @@ function render() {
     $("resume").hidden = !task.paused;
     $("done").hidden = task.paused;
   }
+  renderShelf();
+}
+
+function renderShelf() {
   $("thoughts").replaceChildren(...state.thoughts.map((thought, index) => {
     const item = document.createElement("li");
     const label = document.createElement("span");
@@ -47,7 +51,7 @@ function render() {
     clear.setAttribute("aria-label", "移除暂存事项：" + thought);
     clear.onclick = () => {
       state.thoughts.splice(index, 1);
-      commit("已移除暂存事项。");
+      commit("已移除暂存事项。", renderShelf);
       $("thought").focus();
     };
     item.append(label, clear);
@@ -104,12 +108,6 @@ submit("capture", () => {
   if (!thought) return;
   state.thoughts.push(thought);
   $("thought").value = "";
-  // Keep any draft edits in the current task while updating the shelf.
-  const draft = { step: $("step").value, note: $("note").value };
-  commit("念头已暂存。");
-  if (state.task && !state.task.paused) {
-    $("step").value = draft.step;
-    $("note").value = draft.note;
-  }
+  commit("念头已暂存。", renderShelf);
 });
 render();
