@@ -10,7 +10,9 @@ layout: default
 
 你不用把想法整理好才来，也不需要先证明自己能坚持。
 
-[在线体验](https://focusflow-j2gkquxeg2cifcxmyqxw8w.streamlit.app/) · [README 与源代码](https://github.com/anyan001121-dot/focusflow) · [使用前与使用后](before-after.md)
+[直接打开浏览器版](try/) · [README 与源代码](https://github.com/anyan001121-dot/focusflow) · [使用前与使用后](before-after.md)
+
+浏览器版无需登录，使用本地模板，并在当前浏览器中保存任务和书签。
 
 ## 可以怎样用？
 

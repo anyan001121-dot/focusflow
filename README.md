@@ -2,7 +2,7 @@
 <h1 align="center">FocusFlow</h1>
 <p align="center"><strong>开始不了的时候，先找一小步。<br />被打断以后，留一个能回来的地方。</strong></p>
 <p align="center">A small next step. A place to come back to.</p>
-<p align="center"><a href="https://focusflow-j2gkquxeg2cifcxmyqxw8w.streamlit.app/">在线体验 / Try the demo</a> · <a href="#english">English</a> · <a href="docs/before-after.md">使用前与使用后</a> · <a href="docs/development.md">安装与开发</a></p>
+<p align="center"><a href="https://anyan001121-dot.github.io/focusflow/try/">在线体验 / Try the demo</a> · <a href="#english">English</a> · <a href="docs/before-after.md">使用前与使用后</a> · <a href="docs/development.md">安装与开发</a></p>
 
 ## 也许你遇到过这样的时刻
 

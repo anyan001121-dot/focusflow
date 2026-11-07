@@ -1,0 +1,27 @@
+:root { color-scheme:light; --paper:#f7f2e8; --sheet:#fffdf6; --ink:#272923; --line:#bdb2a1; --stamp:#a23426; }
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.6 system-ui,sans-serif; }
+main { max-width:760px; margin:auto; padding:20px clamp(16px,5vw,42px) 36px; }
+header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:12px; }
+header a { font-size:22px; font-weight:750; color:var(--ink); text-decoration:none; }
+h1 { font:700 clamp(27px,6vw,46px)/1.25 "Songti SC","Noto Serif CJK SC",serif; margin:24px 0 8px; }
+h2 { margin:0 0 12px; font-size:21px; }
+p,li { overflow-wrap:anywhere; }
+form { display:grid; gap:8px; margin:16px 0; }
+label { font-weight:600; }
+textarea,input { font:inherit; width:100%; color:inherit; border:1px solid var(--line); border-radius:0; padding:8px 10px; background:var(--sheet); }
+textarea { resize:vertical; }
+#start { background:var(--sheet); border-bottom:1px dashed var(--line); padding:16px; }
+#start textarea { line-height:28px; background:repeating-linear-gradient(transparent 0 27px,var(--line) 27px 28px) local; padding-top:0; }
+button { justify-self:start; min-height:44px; font:inherit; font-weight:650; cursor:pointer; background:var(--stamp); border:1px solid var(--stamp); color:white; padding:6px 14px; }
+button.quiet { color:var(--ink); background:var(--sheet); border-color:var(--line); }
+:focus-visible { outline:3px solid var(--stamp); outline-offset:3px; }
+#current { margin-top:20px; background:var(--sheet); border-left:4px solid var(--stamp); padding:14px 18px 18px; }
+#current h1 { margin-top:0; }
+.shelf { margin-top:26px; padding-top:14px; border-top:2px solid var(--ink); }
+ul { padding:0; list-style:none; }
+li { border-bottom:1px dashed var(--line); padding:8px 0; display:flex; align-items:center; gap:12px; justify-content:space-between; }
+li button { flex:none; }
+footer { font-size:14px; border-top:1px solid var(--line); padding-top:14px; }
+a { color:var(--stamp); }
