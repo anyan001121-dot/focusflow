@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="52 25 105 110" fill="none">
+<title>FocusFlow sprout</title>
+<path d="M64 107C112 93 166 132 222 103S310 48 371 74s97 40 151 5 63-36 89-31" stroke="#D6D8C9" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 9"/>
+<ellipse cx="100" cy="112" rx="46" ry="13" fill="#ECE6D8"/>
+<path d="M99 108V65" stroke="#536E58" stroke-width="3" stroke-linecap="round"/>
+<path d="M98 85C77 84 66 72 68 55c20-2 32 10 30 30Z" fill="#B4C2A7"/>
+<path d="M101 73c0-24 14-37 37-34-1 24-16 36-37 34Z" fill="#70896D"/>
+<path d="m105 68 20-18M94 80 78 65" stroke="#536E58" stroke-width="1.5" stroke-linecap="round"/>
+<rect x="242" y="77" width="51" height="23" rx="11.5" transform="rotate(-14 242 77)" fill="#D7AA8D"/>
+<rect x="392" y="83" width="42" height="19" rx="9.5" transform="rotate(12 392 83)" fill="#D8DCCB"/>
+<rect x="542" y="42" width="35" height="16" rx="8" transform="rotate(-12 542 42)" fill="#E3DACE"/>
+<circle cx="186" cy="49" r="4" fill="#CE9977"/>
+<circle cx="476" cy="39" r="3" fill="#A4B299"/>
+</svg>

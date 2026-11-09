@@ -25,3 +25,20 @@ li { border-bottom:1px dashed var(--line); padding:8px 0; display:flex; align-it
 li button { flex:none; }
 footer { font-size:14px; border-top:1px solid var(--line); padding-top:14px; }
 a { color:var(--stamp); }
+
+header .brand { display:inline-flex; align-items:center; gap:9px; }
+.intro { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center; }
+.sprout { width:clamp(48px,12vw,84px); height:auto; }
+.step-path { display:block; width:100%; max-height:94px; height:auto; margin:0 auto; }
+.with-icon { display:inline-flex; align-items:center; gap:8px; }
+.with-icon::before {
+  content:"";
+  width:17px;
+  height:17px;
+  flex:none;
+  background:currentColor;
+  mask:var(--icon) center / contain no-repeat;
+}
+.icon-start { --icon:url("art/start.svg"); }
+.icon-pause { --icon:url("art/pause.svg"); }
+.icon-complete { --icon:url("art/complete.svg"); }
