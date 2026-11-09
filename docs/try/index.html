@@ -4,26 +4,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FocusFlow 工作台</title>
 <link rel="icon" href="art/logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="desk.css?v=art-1">
-<script defer src="desk.js"></script>
+<link rel="stylesheet" href="desk.css?v=ai-2">
+<script defer src="desk.js?v=ai-2"></script>
 <main>
-<header><a class="brand" href="../"><img src="art/logo.svg" width="38" height="38" alt="">FocusFlow</a><span>浏览器版</span></header>
-<section id="draft">
+<header><a class="brand" href="../"><img src="art/logo.svg" width="38" height="38" alt="">FocusFlow</a><span id="ai-mode">离线模式</span></header>
+<section id="draft" aria-labelledby="draft-heading">
 <div class="intro">
 <div>
-<h1>想做什么？从一小步开始。</h1>
+<h1 id="draft-heading"><span>想做什么？</span><span>从一小步开始。</span></h1>
 <p>写下你想做的事，让 FocusFlow 帮你看看从哪里开始。</p>
 </div>
 <img class="sprout" src="art/sprout-detail.svg" width="84" height="88" alt="">
 </div>
 <form id="start">
-<label for="task">眼前这件事</label>
+<label for="task">先写下眼前这件事</label>
 <textarea id="task" rows="3" required maxlength="500" placeholder="比如，写论文的讨论部分"></textarea>
 <button class="with-icon icon-start">出发咯</button>
 </form>
+<p class="ai-invitation">接入你自己的 AI，体验完整的 AI 模式，让第一步更贴合你眼前的任务。 <a id="ai-settings-link" href="#ai-settings">去设置 AI</a></p>
 <img class="step-path" src="art/first-step.svg" width="660" height="150" alt="">
 </section>
-<section id="current" hidden>
+<section id="current" aria-labelledby="state-heading" hidden>
 <p id="goal"></p>
 <h1 id="state-heading">眼前这一小步</h1>
 <form id="step-form">
@@ -32,7 +33,7 @@
 <button class="quiet">保存步骤</button>
 </form>
 <form id="pause-form">
-<label for="note">回来时提醒自己（选填）</label>
+<label for="note">给回来的自己留句话 <span class="optional">选填</span></label>
 <input id="note" maxlength="500" placeholder="比如，接着看结果章节的第二段">
 <button class="quiet with-icon icon-pause">暂停并留下书签</button>
 </form>
@@ -42,16 +43,39 @@
 <button id="done" class="with-icon icon-complete">这一步完成了</button>
 </div>
 </section>
-<section class="shelf">
-<h2>工作台</h2>
+<section class="shelf" aria-labelledby="shelf-heading">
+<h2 id="shelf-heading">念头口袋</h2>
 <form id="capture">
-<label for="thought">先放下别的念头</label>
+<label for="thought">想到别的事？先放这儿。</label>
 <input id="thought" maxlength="500" required placeholder="比如，等会儿回邮件">
 <button class="quiet">暂存</button>
 </form>
 <ul id="thoughts"></ul>
 </section>
 <p id="notice" role="status"></p>
-<footer>步骤建议来自本地模板。任务和书签只存于当前浏览器。<br><a href="https://github.com/anyan001121-dot/focusflow">完整项目与源码</a></footer>
+<details class="ai-settings" id="ai-settings">
+<summary>AI 设置</summary>
+<p>默认用离线模板。连接接口后，只有点击「出发咯」才会把任务和补充提示发给该接口，用来生成第一步。</p>
+<form id="ai-form" autocomplete="off">
+<label for="ai-endpoint">AI 接口地址</label>
+<input id="ai-endpoint" type="url" placeholder="https://你的服务/api/step" required maxlength="500">
+<label for="ai-token">接口访问令牌 <span class="optional">选填</span></label>
+<input id="ai-token" type="password" maxlength="500" autocomplete="off" placeholder="仅填写你的接口发放的访问令牌">
+<label for="ai-prompt">给 AI 的补充提示 <span class="optional">选填</span></label>
+<textarea id="ai-prompt" rows="2" maxlength="400" placeholder="比如，我现在有点累，希望第一步只花两分钟。"></textarea>
+<p class="optional">地址、令牌和提示只保留在当前页面。模型密钥在接口服务端配置。</p>
+<div class="actions">
+<button type="submit">启用 AI</button>
+<button type="button" id="ai-off" class="quiet" hidden>切回离线</button>
+</div>
+</form>
+<p id="ai-status" role="status"></p>
+<details class="api-help">
+<summary>怎么配置接口？</summary>
+<p>本机运行时，在服务端环境配置 <code>OPENAI_API_KEY</code>，然后在项目目录执行 <code>python3 scripts/browser_ai.py</code>。打开终端显示的网页，展开这里并点击「启用 AI」。</p>
+<p>使用自己的 HTTPS 接口时，接口需允许当前网页来源，并接收 POST JSON <code>{ task, prompt }</code>，返回 JSON <code>{ step }</code>。有访问令牌时，网页通过 Bearer 请求头发送。</p>
+</details>
+</details>
+<footer>任务和书签保存在当前浏览器。<br><a href="https://github.com/anyan001121-dot/focusflow">完整项目与源码</a></footer>
 </main>
 </html>

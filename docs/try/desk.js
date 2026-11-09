@@ -72,12 +72,100 @@ function submit(id, action) {
     action();
   });
 }
-submit("start", () => {
+let ai = null;
+let starting = false;
+const localRelay = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+if (localRelay) $("ai-endpoint").value = new URL("/api/step", location.origin).href;
+
+$("ai-settings-link").addEventListener("click", event => {
+  event.preventDefault();
+  $("ai-settings").open = true;
+  $("ai-endpoint").focus();
+});
+
+submit("ai-form", () => {
+  let endpoint;
+  try {
+    endpoint = new URL($("ai-endpoint").value.trim());
+    const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname);
+    if ((endpoint.protocol !== "https:" && !(loopback && endpoint.protocol === "http:")) ||
+        endpoint.username || endpoint.password || endpoint.hash || endpoint.search) {
+      throw new Error("invalid endpoint");
+    }
+  } catch {
+    $("ai-status").textContent = "请输入 HTTPS 接口地址。本机接口可以用 HTTP，地址里请勿附带令牌。";
+    return;
+  }
+  ai = {
+    endpoint: endpoint.href,
+    token: $("ai-token").value.trim() || (ai?.endpoint === endpoint.href ? ai.token : ""),
+    prompt: $("ai-prompt").value.trim(),
+  };
+  $("ai-token").value = "";
+  $("ai-mode").textContent = "AI 模式";
+  $("ai-off").hidden = false;
+  $("ai-status").textContent = "已启用。点击「出发咯」时会连接 " + endpoint.host + "。";
+});
+
+$("ai-off").onclick = () => {
+  ai = null;
+  $("ai-token").value = "";
+  $("ai-off").hidden = true;
+  $("ai-mode").textContent = "离线模式";
+  $("ai-status").textContent = "已切回离线模板。";
+};
+
+async function requestStep(title, config) {
+  const headers = { "Content-Type": "application/json" };
+  if (config.token) headers.Authorization = "Bearer " + config.token;
+  const response = await fetch(config.endpoint, {
+    method: "POST",
+    headers,
+    credentials: "omit",
+    redirect: "error",
+    signal: AbortSignal.timeout(15000),
+    body: JSON.stringify({ task: title, prompt: config.prompt }),
+  });
+  if (response.status === 401 || response.status === 403) throw new Error("接口未授权，请检查访问令牌");
+  if (response.status === 429) throw new Error("接口暂时限流，请稍后重试");
+  if (!response.ok) throw new Error("接口暂不可用");
+  const result = await response.json();
+  const step = typeof result?.step === "string" ? result.step.trim() : "";
+  if (!step || step.length > 500) throw new Error("接口没有返回可用的步骤");
+  return step;
+}
+
+submit("start", async () => {
   const title = $("task").value.trim();
-  if (!title) return;
-  state.task = { title, step: suggest(title), note: "", paused: false };
+  if (!title || starting) return;
+  const config = ai;
+  let step = suggest(title);
+  let message = "已找到一个起点。";
+  if (config) {
+    const button = $("start").querySelector("button");
+    starting = true;
+    button.disabled = true;
+    $("task").readOnly = true;
+    button.textContent = "正在找第一步…";
+    $("notice").textContent = "正在连接 AI 接口。";
+    try {
+      step = await requestStep(title, config);
+      message = "AI 找到了一个起点，你可以再改小一点。";
+    } catch (error) {
+      const reason = error.name === "TimeoutError" ? "连接超时" :
+        error.name === "TypeError" || error.name === "SyntaxError" ? "接口连接或返回格式有误" : error.message;
+      message = reason + "。这次先用离线建议。";
+      $("ai-status").textContent = message;
+    } finally {
+      starting = false;
+      button.disabled = false;
+      $("task").readOnly = false;
+      button.textContent = "出发咯";
+    }
+  }
+  state.task = { title, step, note: "", paused: false };
   $("task").value = "";
-  commit("已找到一个起点。");
+  commit(message);
   $("step").focus();
 });
 submit("step-form", () => {
