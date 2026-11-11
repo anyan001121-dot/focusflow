@@ -4,14 +4,44 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FocusFlow 工作台</title>
 <link rel="icon" href="art/logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="desk.css?v=ai-2">
-<script defer src="desk.js?v=ai-2"></script>
+<link rel="stylesheet" href="desk.css?v=workbench-1">
+<script defer src="desk.js?v=workbench-1"></script>
 <main>
-<header><a class="brand" href="../"><img src="art/logo.svg" width="38" height="38" alt="">FocusFlow</a><span id="ai-mode">离线模式</span></header>
+<header>
+<a class="brand" href="../"><img src="art/logo.svg" width="38" height="38" alt="">FocusFlow</a>
+<div class="desk-tools">
+<span id="ai-mode">离线模式</span>
+<button id="review-toggle" class="quiet" type="button" aria-controls="task-review" aria-expanded="false" hidden>回看任务</button>
+</div>
+</header>
+<nav id="desk-index-top" class="desk-index" aria-label="页首导览" tabindex="-1">
+<a href="#draft-heading" data-focus-link>开始任务</a>
+<a href="#task-shelf-heading" data-needs="task-shelf" hidden>待接回</a>
+<a href="#shelf-heading" data-work-link>念头口袋</a>
+<a href="#recap-heading" data-needs="task-recap" hidden>任务回顾</a>
+<a href="#review-heading" data-review-link hidden>回看任务</a>
+<a href="#summary-options" data-review-link hidden>汇总任务</a>
+<a href="#ai-settings" data-work-link>AI 设置</a>
+</nav>
+<p id="storage-notice" role="status" hidden></p>
+<div class="workbench-grid">
+<div id="focus-pane">
+<div id="return-prompt" class="return-prompt" hidden>
+<div><strong>刚才那件事</strong><p id="return-title"></p><p id="return-context" class="optional"></p></div>
+<button id="return-task" type="button">接回来</button>
+</div>
+<section id="task-recap" aria-labelledby="recap-heading" hidden>
+<div class="shelf-head">
+<h2 id="recap-heading" tabindex="-1">任务回顾</h2>
+<button id="recap-close" class="quiet" type="button">收起回顾</button>
+</div>
+<p id="recap-title"></p>
+<div id="recap-fields"></div>
+</section>
 <section id="draft" aria-labelledby="draft-heading">
 <div class="intro">
 <div>
-<h1 id="draft-heading"><span>想做什么？</span><span>从一小步开始。</span></h1>
+<h1 id="draft-heading" tabindex="-1"><span>想做什么？</span><span>从一小步开始。</span></h1>
 <p>写下你想做的事，让 FocusFlow 帮你看看从哪里开始。</p>
 </div>
 <img class="sprout" src="art/sprout-detail.svg" width="84" height="88" alt="">
@@ -19,32 +49,115 @@
 <form id="start">
 <label for="task">先写下眼前这件事</label>
 <textarea id="task" rows="3" required maxlength="500" placeholder="比如，写论文的讨论部分"></textarea>
-<button class="with-icon icon-start">出发咯</button>
+<p id="start-draft-status" class="draft-status optional" role="status"></p>
+<div class="actions">
+<button id="start-task" class="with-icon icon-start">出发咯</button>
+<button id="save-task" class="quiet" type="button">先存起来</button>
+</div>
 </form>
 <p class="ai-invitation">接入你自己的 AI，体验完整的 AI 模式，让第一步更贴合你眼前的任务。 <a id="ai-settings-link" href="#ai-settings">去设置 AI</a></p>
 <img class="step-path" src="art/first-step.svg" width="660" height="150" alt="">
 </section>
 <section id="current" aria-labelledby="state-heading" hidden>
-<p id="goal"></p>
-<h1 id="state-heading">眼前这一小步</h1>
+<h1 id="goal"></h1>
+<h2 id="state-heading" tabindex="-1">眼前这一小步</h2>
+<p id="return-note" hidden></p>
+<p id="task-draft-status" class="draft-status optional" role="status"></p>
 <form id="step-form">
 <label for="step">这一步可以自己改</label>
 <textarea id="step" rows="2" required maxlength="500"></textarea>
+<div id="step-actions" class="actions">
+<button id="done" type="button" class="with-icon icon-complete">这一步完成了</button>
 <button class="quiet">保存步骤</button>
+</div>
 </form>
 <form id="pause-form">
 <label for="note">给回来的自己留句话 <span class="optional">选填</span></label>
 <input id="note" maxlength="500" placeholder="比如，接着看结果章节的第二段">
 <button class="quiet with-icon icon-pause">暂停并留下书签</button>
 </form>
-<p id="return-note" hidden></p>
+<form id="next-form" hidden>
+<label for="next-step">接下来想做哪一小步？</label>
+<textarea id="next-step" rows="2" required maxlength="500"></textarea>
+<button>继续下一步</button>
+</form>
+<details id="result-box" hidden>
+<summary>留个回顾（选填）</summary>
+<label for="task-result">这件事有什么结果？</label>
+<textarea id="task-result" rows="2" maxlength="500"></textarea>
+<label for="next-experiment">下次试试</label>
+<input id="next-experiment" maxlength="500" placeholder="比如，开始前关掉消息预览">
+</details>
 <div class="actions">
 <button id="resume" hidden>接着来</button>
-<button id="done" class="with-icon icon-complete">这一步完成了</button>
+<button id="park-task" class="quiet" hidden>先做别的</button>
+<button id="finish-task" class="quiet" hidden>结束这件事</button>
 </div>
+<details id="distraction-box" hidden>
+<summary>记一次分神 <span id="distraction-count" class="optional" aria-live="polite"></span></summary>
+<p id="shortcut-label" class="optional">点一下就记下</p>
+<div class="actions distraction-shortcuts" id="distraction-shortcuts" role="group" aria-labelledby="shortcut-label">
+<button class="quiet" type="button" data-reason="手机消息">手机消息</button>
+<button class="quiet" type="button" data-reason="想到别的事">想到别的事</button>
+<button class="quiet" type="button" data-reason="步骤太大">步骤太大</button>
+</div>
+<form id="distraction-form">
+<label for="distraction-reason">刚才被什么带走了注意力？ <span class="optional">选填</span></label>
+<input id="distraction-reason" maxlength="120" placeholder="比如，手机消息、想到另一件事">
+<div class="actions">
+<button class="quiet">记下来</button>
+<button id="undo-distraction" class="quiet" type="button" hidden>撤销上一次</button>
+</div>
+</form>
+</details>
+</section>
+</div>
+<section id="task-shelf" aria-labelledby="task-shelf-heading" data-empty>
+<div class="shelf-head">
+<div class="shelf-title">
+<h2 id="task-shelf-heading" tabindex="-1">待接回</h2>
+<span class="optional" id="task-count"></span>
+</div>
+<button id="tree-toggle" type="button" class="quiet" aria-controls="task-tree" aria-expanded="false">任务树</button>
+</div>
+<ul id="saved-tasks"></ul>
+<ul id="task-tree" aria-label="任务树" hidden></ul>
+<p id="shelf-empty" class="optional" hidden>暂无待接回的任务。</p>
+<details id="add-task" hidden>
+<summary>存一个任务</summary>
+<form id="queue-form">
+<label for="queued-task">想留到稍后做的事</label>
+<input id="queued-task" maxlength="500" required>
+<button class="quiet">存到待接回</button>
+</form>
+</details>
+</section>
+<div class="workbench-side">
+<section id="task-review" aria-labelledby="review-heading" hidden>
+<h2 id="review-heading" tabindex="-1">回看任务</h2>
+<div class="review-picker">
+<label for="review-task">查看哪件事？</label>
+<select id="review-task"></select>
+</div>
+<div id="review-detail"></div>
+<details id="summary-options">
+<summary>汇总任务</summary>
+<form id="summary-form">
+<fieldset>
+<legend>选几件事一起看</legend>
+<div id="summary-choices"></div>
+</fieldset>
+<p class="optional">汇总使用已保存的步骤、书签和结果。</p>
+<button id="generate-summary" disabled>生成汇总</button>
+</form>
+</details>
+<section id="summary-result" aria-labelledby="summary-heading" hidden>
+<h3 id="summary-heading" tabindex="-1">任务汇总</h3>
+<ul id="summary-items"></ul>
+</section>
 </section>
 <section class="shelf" aria-labelledby="shelf-heading">
-<h2 id="shelf-heading">念头口袋</h2>
+<h2 id="shelf-heading" tabindex="-1">念头口袋</h2>
 <form id="capture">
 <label for="thought">想到别的事？先放这儿。</label>
 <input id="thought" maxlength="500" required placeholder="比如，等会儿回邮件">
@@ -52,10 +165,9 @@
 </form>
 <ul id="thoughts"></ul>
 </section>
-<p id="notice" role="status"></p>
 <details class="ai-settings" id="ai-settings">
 <summary>AI 设置</summary>
-<p>默认用离线模板。连接接口后，只有点击「出发咯」才会把任务和补充提示发给该接口，用来生成第一步。</p>
+<p>默认用离线模板。启用 AI 后，点击「出发咯」会把输入的任务和补充提示发送到你的接口，用来生成第一步。</p>
 <form id="ai-form" autocomplete="off">
 <label for="ai-endpoint">AI 接口地址</label>
 <input id="ai-endpoint" type="url" placeholder="https://你的服务/api/step" required maxlength="500">
@@ -76,6 +188,14 @@
 <p>使用自己的 HTTPS 接口时，接口需允许当前网页来源，并接收 POST JSON <code>{ task, prompt }</code>，返回 JSON <code>{ step }</code>。有访问令牌时，网页通过 Bearer 请求头发送。</p>
 </details>
 </details>
-<footer>任务和书签保存在当前浏览器。<br><a href="https://github.com/anyan001121-dot/focusflow">完整项目与源码</a></footer>
+</div>
+</div>
+<p id="notice" role="status"></p>
+<footer>
+<nav id="desk-index-bottom" class="desk-index" aria-label="页尾导览">
+<a href="#desk-index-top">回到页首</a>
+</nav>
+任务和书签保存在当前浏览器。<br><a href="https://github.com/anyan001121-dot/focusflow">完整项目与源码</a>
+</footer>
 </main>
 </html>

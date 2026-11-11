@@ -26,7 +26,7 @@ FocusFlow 想在这些具体的时刻帮一点忙。你可以把没整理好的�
 
 | 此刻可能发生的事 | FocusFlow 能帮你做的事 | 仍然由你决定 |
 | --- | --- | --- |
-| “我要写论文。”任务太大，不知道从哪儿碰起 | 把当前动作单独放在眼前，并显示这一步做到哪里就可以 | 建议是否适合；太难时可以再拆小 |
+| “我要写论文。”任务太大，不知道从哪儿碰起 | 给一个单独显示、可以编辑的第一步 | 这一步是否合适，想从哪里开始 |
 | 写着写着想起另一封邮件，怕忘就想切过去 | 把这件事暂存，保留原来的步骤 | 什么时候处理；有急事可以先暂停 |
 | 开会回来，忘了刚才停在哪里 | 保存目标、步骤和可选的返回提示 | 什么时候回来，不需要补打卡 |
 | 做完一小段，却离整个目标还很远 | 记录完成的小步骤，不把它说成整件事已完成 | 继续下一件事，或今天先停在这里 |
@@ -35,13 +35,17 @@ FocusFlow 想在这些具体的时刻帮一点忙。你可以把没整理好的�
 
 ## 先试一次就好
 
-1. **写下眼前的事。** 一句话就行。也可以一次写几件，工具会列出最多三个候选任务。
-2. **看一个下一步。** 不合适或太难，可以再拆小；不用先看完一整份计划。
-3. **随时停下来。** 可以留一句“结果章节，第 2 段”，也可以不写提示直接暂停。
+打开[网页版工作台](https://anyan001121-dot.github.io/focusflow/try/)，直接用离线模板开始。桌面左边是待接回，中间是眼前任务，右边是念头口袋和回看。手机先显示当前任务，页首和页尾都有导览。
 
-完成后，暂存的事情可以直接开始，也可以标记为已处理。计时默认收起，想看时再打开。
+![FocusFlow 三栏工作台：待接回、当前步骤和念头口袋](docs/screenshots/workbench/workbench.png)
 
-无需 API key 就能体验**练习模式**。它使用固定模板，能演示操作流程，但建议可能笼统。连接 AI 服务后才会由模型生成建议，具体内容仍需要你判断。公开演示的版本取决于部署状态；仓库更新不代表线上已经更新。
+1. **先做一小步。** 写下任务，点「出发咯」。第一步可以自己改，当前步骤和返回提示的草稿刷新后也能接着写。
+2. **需要切走时，给自己留个位置。** 想到别的事就先放进念头口袋。如果要现在做，点「先做这件」，原任务的步骤和书签会一起保存。回来点「接回来」。
+3. **想知道推进了多少，就回看一下。** 每点一次「这一步完成了」，就记下一步。任务结束后，可以看到完成的小步、自己记下的分神原因、结果和「下次试试」。
+
+有几件事在手上时，可以先存到「待接回」，用任务树加子任务或找回书签。点「回看任务」可以查看别的任务，也可以勾选几件事，在本地汇总已有结果、停在哪儿和下一步。[工作台用法与后续规划](docs/workbench-roadmap.md)
+
+想要更贴合任务的第一步时，可以在「AI 设置」接入自己的接口。网页只在你点「出发咯」时发送任务和补充提示。接口失败时会给出离线建议。
 
 ## 我们希望它怎样陪你做事
 
@@ -54,15 +58,15 @@ FocusFlow 想在这些具体的时刻帮一点忙。你可以把没整理好的�
 
 ## 数据会放在哪里？
 
-本地单人运行时，任务、事件记录和偏好保存在运行应用的电脑里的 SQLite 数据库中。接入 Anthropic 或 OpenAI 后，任务内容会发给所选服务商生成建议。应用内可以删除保存的数据。
+**GitHub Pages 网页版**把任务、念头、草稿和回顾存在当前浏览器。用同一浏览器刷新可以恢复，换设备或清除站点数据后需要重新开始。AI 接口地址、令牌和补充提示只保留在当前页面。
 
-公开部署需要启用多会话隔离。它使用临时会话标识，不能保证刷新或重新访问后还能找回原来的任务；请不要把公开演示当作长期个人工作区。[详细说明与配置](docs/development.md#privacy-and-deployment)
+**Python / Streamlit 版**在本地单人运行时使用 SQLite。自行公开部署 Streamlit 时，应启用多会话隔离，临时会话的恢复取决于部署配置。[详细说明与配置](docs/development.md#privacy-and-deployment)
 
 FocusFlow 不诊断或治疗 ADHD，也不提供医疗建议。
 
 ## 在自己电脑上运行
 
-需要 Python 3.11 或以上版本：
+只想本机体验网页，可以在项目目录执行 `python3 -m http.server 8000 --directory docs`，再打开 `http://127.0.0.1:8000/try/`。运行 Streamlit 版需要 Python 3.11 或以上版本：
 
 ```bash
 git clone https://github.com/anyan001121-dot/focusflow.git
@@ -93,12 +97,12 @@ These are illustrative situations, not measured results or testimonials.
 
 | Without a place to keep your next step | With FocusFlow |
 | --- | --- |
-| A large goal sits on a list: “write my paper” | One suggested action and a visible completion condition |
+| A large goal sits on a list: “write my paper” | One suggested action you can edit |
 | Another thought pulls you into a different task | A place to save it while keeping the current step |
 | Returning from a break means rebuilding the context | Your saved step and an optional note from before the break |
 | A short session feels unfinished | A record of the steps you took, without claiming the whole goal is done |
 
-Pause whenever you need. Show the timer only if it helps. There are no streaks to repair when you return.
+Pause whenever you need. When you return, pick up from the step and note you left yourself.
 
 Practice mode works without an API key and uses templates. Connected AI suggestions may be more specific, but can still miss the context. Completing suggested steps is not proof of completing the larger real-world goal. We haven't established that FocusFlow improves ADHD symptoms or task outcomes.
 
@@ -106,7 +110,7 @@ Practice mode works without an API key and uses templates. Connected AI suggesti
 
 Use the installation commands above. The [development guide](docs/development.md) covers AI configuration, persistence, public deployment, and tests. The [scenario guide](docs/before-after.md) walks through the intended experience and its limits.
 
-Local data is stored on the machine running the app. If an AI provider is configured, task text is sent to that provider. Public demo sessions are temporary. FocusFlow is not a medical device.
+The [browser workbench](https://anyan001121-dot.github.io/focusflow/try/) saves tasks, drafts, bookmarks, and recaps in the current browser. Use the task tree to revisit branches, or select several tasks to generate an offline summary. An optional AI endpoint receives the task and extra prompt when you start a new task from the home form. The separate Streamlit app uses local SQLite in single-user mode.
 
 If you try it, useful feedback is very concrete: **What were you trying to do? Which step helped you act, or made you stop?** You don't need to share private task content or medical information.
 
@@ -115,6 +119,6 @@ If you try it, useful feedback is very concrete: **What were you trying to do? W
 
 ## 最新更新 / Latest update
 
-新增待接回任务、步骤编辑与撤销、卡住时的准备动作，以及进度文件备份恢复。界面采用统一的矢量插画与线性图标。详见 [2026-11-06 更新说明](docs/release-2026-11-06.md)。
+网页版新增三栏工作台、任务树、自动保存草稿、任务回顾和多任务汇总。[查看工作台说明](docs/workbench-roadmap.md)
 
-Added parked tasks, editable steps, undo, prerequisite actions, and portable return files. The interface now uses consistent vector artwork and line icons. Return files are manual backups, not automatic cloud sync.
+The browser release adds a three-column workbench, a task tree, autosaved drafts, completion recaps, and summaries of selected tasks. The [previous Streamlit release notes](docs/release-2026-11-06.md) cover portable return files and step editing.
