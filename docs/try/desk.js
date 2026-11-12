@@ -5,6 +5,8 @@ const $ = id => document.getElementById(id);
 let state = { activeId: null, tasks: [], thoughts: [], returnTrail: [] };
 let stored = null;
 let starting = false;
+let stepSuggestion = null;
+let lastCheck = null;
 let treeOpen = false;
 let treeActiveId = null;
 const expandedTasks = new Set();
@@ -123,6 +125,11 @@ function activeTask() {
   return state.tasks.find(task => task.id === state.activeId);
 }
 
+function nextStep(task) {
+  return task.draft?.nextDraft ?? task.nextDraft ?? task.upcomingSteps?.[0] ??
+    (task.status === "step-done" ? suggestContinuation(task) : "");
+}
+
 function taskWithEdits(task) {
   if (task.status === "step-done") {
     return {
@@ -138,17 +145,28 @@ function updateTask(task, message, updateView = render) {
   return commit({ ...state, tasks: state.tasks.map(item => item.id === task.id ? task : item) }, message, updateView);
 }
 
+function taskForReturn(task) {
+  const edited = taskWithEdits(task);
+  return edited.status === "working" ? { ...edited, status: "paused" } : edited;
+}
+
+function focusTaskStep() {
+  ($("done") || $("state-heading")).focus();
+}
+
 function activate(task, message, { thoughts = state.thoughts, consumeStartDraft = false } = {}) {
   if (starting || task.id === state.activeId || task.status === "completed") return false;
   const current = activeTask();
-  const edited = current && taskWithEdits(current);
-  const next = { ...task, step: task.step || suggest(task.title) };
+  const parked = current && taskForReturn(current);
+  const next = { ...task };
+  if (!next.step && next.status !== "step-done") {
+    const [step, ...upcomingSteps] = suggestPlan(task.title);
+    Object.assign(next, { step, upcomingSteps });
+  }
   if (next.status !== "step-done") next.status = "working";
   const tasks = state.tasks.map(item => {
     if (item.id === next.id) return next;
-    if (item.id === edited?.id) {
-      return { ...edited, status: edited.status === "working" ? "paused" : edited.status };
-    }
+    if (item.id === parked?.id) return parked;
     return item;
   });
   if (!tasks.some(item => item.id === next.id)) tasks.push(next);
@@ -156,7 +174,7 @@ function activate(task, message, { thoughts = state.thoughts, consumeStartDraft 
   if (current) returnTrail.push(current.id);
   const startDraft = consumeStartDraft ? "" : state.startDraft;
   if (commit({ ...state, tasks, activeId: next.id, returnTrail, thoughts, startDraft }, message)) {
-    $(next.status === "step-done" ? "next-step" : "step").focus();
+    focusTaskStep();
     return true;
   }
   return false;
@@ -170,7 +188,10 @@ function saveTask(input, parentId = null) {
   const startDraft = input.id === "task" ? "" : state.startDraft;
   if (!commit({ ...state, tasks, startDraft }, parentId ? "子任务已存到任务树。" : "任务已存到待接回。", renderTasks)) return;
   input.value = "";
-  if (input.id === "task") $("start-draft-status").textContent = "";
+  if (input.id === "task") {
+    $("start-draft-status").textContent = "";
+    renderStartDraftActions("");
+  }
   return task;
 }
 
@@ -182,12 +203,31 @@ function showDraftStatus(id, message) {
   if (status.textContent !== message) status.textContent = message;
 }
 
+function renderStartDraftActions(value) {
+  $("task-example").hidden = !!value.trim();
+  $("clear-task-draft").hidden = !value;
+}
+
 $("task").addEventListener("input", () => {
   if (state.activeId || starting) return;
   const startDraft = $("task").value;
+  renderStartDraftActions(startDraft);
   const saved = commit({ ...state, startDraft }, null, () => {});
   showDraftStatus("start-draft-status", saved ? (startDraft ? savedDraftMessage : "") : unsavedDraftMessage);
 });
+
+$("clear-task-draft").onclick = () => {
+  if (starting || activeTask() || !$("task").value) return;
+  if (commit({ ...state, startDraft: "" }, "输入已清空。")) $("task").focus();
+};
+
+$("task-example").onclick = () => {
+  const input = $("task");
+  if (starting || activeTask() || input.value.trim()) return;
+  input.value = "我需要复习课程";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  $("start-task").focus();
+};
 
 const taskDraftFields = {
   working: { step: "step", note: "note" },
@@ -201,45 +241,174 @@ for (const field of Object.values(taskDraftFields).flatMap(fields => Object.valu
     const draft = Object.fromEntries(Object.entries(fields).map(([key, id]) => [key, $(id).value]));
     const saved = updateTask({ ...task, draft }, null, () => {});
     showDraftStatus("task-draft-status", saved ? savedDraftMessage : unsavedDraftMessage);
+    const shownStep = $("checklist-current");
+    if (field === "step" || field === "next-step") {
+      if (shownStep) shownStep.textContent = $(field).value.trim() || task.step;
+      if (field === "next-step") renderAfterSteps(task);
+      renderStepSuggestion(task);
+    }
   });
 }
 
 function render() {
   const task = activeTask();
+  if (lastCheck && (lastCheck.taskId !== task?.id || lastCheck.status !== task.status)) lastCheck = null;
   $("draft").hidden = !!task;
   $("current").hidden = !task;
   if (!task) {
+    $("task-options").open = false;
     $("task").value = state.startDraft ?? "";
+    renderStartDraftActions($("task").value);
     $("start-draft-status").textContent = state.startDraft ? savedDraftMessage : "";
   }
   if (task) {
     const paused = task.status === "paused";
     const stepDone = task.status === "step-done";
+    if ($("task-options").dataset.taskId !== task.id) {
+      $("task-options").open = false;
+      $("task-options").dataset.taskId = task.id;
+    }
     $("goal").textContent = task.title;
-    $("state-heading").textContent = paused ? "暂停书签" : stepDone ? "这一小步做完了" : "眼前这一小步";
+    $("state-heading").textContent = paused ? "暂停书签" : "任务清单";
     $("step").value = task.draft?.step ?? task.step;
     $("step").readOnly = paused;
     $("step-form").hidden = stepDone;
-    $("step-actions").hidden = paused;
     $("note").value = task.draft?.note ?? task.note;
     $("pause-form").hidden = paused || stepDone;
+    $("bookmark-options").hidden = paused || stepDone;
+    $("step-editor").hidden = paused;
     $("return-note").textContent = task.note ? "回来时：" + task.note : "";
     $("return-note").hidden = !task.note || stepDone;
     $("resume").hidden = !paused;
-    $("park-task").hidden = !paused;
-    $("done").hidden = paused || stepDone;
     $("next-form").hidden = !stepDone;
-    $("next-step").value = task.draft?.nextDraft ?? task.nextDraft ?? "";
+    $("next-step").value = nextStep(task);
+    renderAfterSteps(task);
     $("result-box").hidden = !stepDone;
     $("task-result").value = task.draft?.result ?? task.result ?? "";
     $("next-experiment").value = task.draft?.nextExperiment ?? task.nextExperiment ?? "";
     $("result-box").open = stepDone && !!($("task-result").value || $("next-experiment").value);
     $("task-draft-status").textContent = task.draft ? savedDraftMessage : "";
-    $("finish-task").hidden = !stepDone;
+    renderChecklist(task);
+  } else {
+    resetChecklist("");
   }
+  renderStepSuggestion(task);
   renderDistractionLog();
   renderTasks();
   renderShelf();
+}
+
+function resetChecklist(taskId) {
+  const checklist = $("step-checklist");
+  if (checklist.dataset.taskId === taskId) return;
+  checklist.dataset.taskId = taskId;
+  $("step-editor").open = false;
+  $("bookmark-options").open = false;
+  $("adjust-plan").open = false;
+  $("adjust-feedback").value = "";
+  $("adjust-status").textContent = "";
+}
+
+function renderAfterSteps(task) {
+  const stepDone = task.status === "step-done";
+  const hasPending = !!task.upcomingSteps?.length;
+  $("after-steps").hidden = !stepDone;
+  $("continue-step").textContent = hasPending ? "接着做" :
+    $("next-step").value.trim() ? "再做一步" : "添加一步";
+  $("finish-task").classList.toggle("quiet", hasPending);
+}
+
+function renderChecklist(task) {
+  resetChecklist(task.id);
+  const list = $("checklist-steps");
+  const completed = task.completedSteps ?? [];
+  const upcoming = task.upcomingSteps ?? [];
+  const stepDone = task.status === "step-done";
+  const paused = task.status === "paused";
+  const total = completed.length + upcoming.length + Number(!stepDone);
+  $("checklist-progress").textContent = "已完成 " + completed.length + " / " + total + " 步";
+  $("step-progress").max = total || 1;
+  $("step-progress").value = completed.length;
+  const allChecked = stepDone && !upcoming.length && completed.length > 0;
+  $("undo-step").hidden = !lastCheck;
+  showDraftStatus("step-feedback", allChecked ? "这几步都做完了。" :
+    lastCheck ? "第 " + completed.length + " 步做完了。" : "");
+  list.replaceChildren();
+  const editor = $("edit-upcoming");
+  editor.replaceChildren();
+
+  function appendStep(text, status, number, editable = false) {
+    const item = document.createElement("li");
+    item.className = "checklist-row";
+    item.dataset.status = status;
+    const row = document.createElement(status === "current" ? "label" : "div");
+    row.className = "checklist-row-body";
+    const marker = document.createElement(status === "current" ? "input" : "span");
+    if (status === "current") {
+      marker.type = "checkbox";
+      marker.id = "done";
+      marker.className = "step-check";
+      marker.setAttribute("aria-describedby", "checklist-current");
+      marker.setAttribute("aria-label", "完成第 " + number + " 步");
+      marker.onchange = () => {
+        if (marker.checked && !completeCurrentStep()) marker.checked = false;
+      };
+    } else {
+      marker.className = "step-marker";
+      marker.textContent = status === "done" ? "✓" : number;
+      marker.setAttribute("aria-hidden", "true");
+    }
+    if (status === "done" && lastCheck?.animate && number === completed.length) {
+      marker.dataset.celebrate = "";
+    }
+    const copy = document.createElement("span");
+    const caption = document.createElement("span");
+    caption.className = "step-caption";
+    caption.textContent = { done: "已完成", current: "现在做", paused: "暂停在这里", upcoming: "" }[status];
+    const action = document.createElement("span");
+    if (editable) action.id = "checklist-current";
+    action.textContent = text;
+    copy.append(caption, action);
+    row.append(marker, copy);
+    item.append(row);
+    list.append(item);
+    return action;
+  }
+
+  completed.forEach((step, index) => appendStep(step, "done", index + 1));
+  if (!stepDone) appendStep($("step").value.trim() || task.step, paused ? "paused" : "current", completed.length + 1, true);
+  upcoming.forEach((step, index) => {
+    const number = completed.length + index + (stepDone ? 1 : 2);
+    const isNext = stepDone && index === 0;
+    const shown = appendStep(isNext ? $("next-step").value.trim() || step : step, "upcoming", number, isNext);
+    if (isNext || paused) return;
+    const label = document.createElement("label");
+    label.textContent = "修改第 " + number + " 步";
+    const input = document.createElement("textarea");
+    input.id = "checklist-step-" + number;
+    input.rows = 2;
+    input.maxLength = 500;
+    input.value = step;
+    label.htmlFor = input.id;
+    input.oninput = () => {
+      const current = activeTask();
+      const action = input.value.trim();
+      if (current?.id !== task.id || !action) return;
+      const upcomingSteps = [...current.upcomingSteps];
+      upcomingSteps[index] = action;
+      const saved = updateTask({ ...current, upcomingSteps }, null, () => {});
+      showDraftStatus("task-draft-status", saved ? savedDraftMessage : unsavedDraftMessage);
+      if (saved) shown.textContent = action;
+    };
+    input.onblur = () => {
+      if (!input.value.trim() && activeTask()?.id === task.id) {
+        input.value = activeTask().upcomingSteps[index];
+      }
+    };
+    editor.append(label, input);
+  });
+  if (lastCheck) lastCheck.animate = false;
+  renderAdjustment();
 }
 
 function renderDistractionLog() {
@@ -274,19 +443,27 @@ function openSavedTask(task) {
 function removeTask(task, focusTarget) {
   if (!window.confirm("移除「" + task.title + "」及其记录？")) return;
   const tasks = state.tasks.filter(item => item.id !== task.id);
+  const removingCurrent = state.activeId === task.id;
+  const activeId = removingCurrent ? null : state.activeId;
   const returnTrail = state.returnTrail.filter(id => id !== task.id);
-  if (commit({ ...state, tasks, returnTrail }, "任务已移除。", renderTasks)) {
+  const updateView = removingCurrent ? render : renderTasks;
+  if (commit({ ...state, tasks, activeId, returnTrail }, "任务已移除。", updateView)) {
     expandedTasks.delete(task.id);
     childDrafts.delete(task.id);
     (focusTarget.hidden || !state.tasks.length ? $("task") : focusTarget).focus();
   }
 }
 
+$("clear-active-task").onclick = () => {
+  const task = activeTask();
+  if (task) removeTask(task, $("task"));
+};
+
 function renderTasks() {
   renderRecap();
   const current = activeTask();
   const saved = state.tasks.filter(task => task.id !== state.activeId && task.status !== "completed");
-  const returnTask = !current && saved.find(task => task.id === state.returnTrail.at(-1));
+  const returnTask = saved.find(task => task.id === state.returnTrail.at(-1));
   const listed = saved.filter(task => task.id !== returnTask?.id);
   $("task-shelf").toggleAttribute("data-empty", !state.tasks.length);
   $("tree-toggle").hidden = !state.tasks.length;
@@ -300,10 +477,17 @@ function renderTasks() {
   $("shelf-empty").hidden = treeOpen || !!listed.length || !!current;
   $("return-prompt").hidden = !returnTask;
   $("return-title").textContent = returnTask ? returnTask.title : "";
-  $("return-context").textContent = returnTask?.status === "step-done" ? "上一步已完成" :
-    returnTask?.note || returnTask?.step || "";
+  const lastDone = returnTask?.completedSteps?.at(-1) || (returnTask?.status === "step-done" ? returnTask.step : "");
+  $("return-done").textContent = lastDone;
+  $("return-done-row").hidden = !lastDone;
+  $("return-context").textContent = returnTask ? resumeAction(returnTask) : "";
+  $("return-bookmark").textContent = returnTask?.note ?? "";
+  $("return-note-row").hidden = !returnTask?.note;
   $("return-task").disabled = starting;
   $("return-task").onclick = returnTask ? () => activate(returnTask, "从上次停下的地方接着来。") : null;
+  $("remove-return-task").disabled = starting;
+  $("remove-return-task").onclick = returnTask ? () => removeTask(returnTask, $(current ? "state-heading" : "task")) : null;
+  if ($("daily-summary").open) renderDailySummary();
   renderReview();
   if (treeOpen) {
     renderTaskTree();
@@ -315,8 +499,7 @@ function renderTasks() {
     const title = document.createElement("strong");
     title.textContent = task.title;
     const detail = document.createElement("p");
-    detail.textContent = task.status === "queued" ? "还没开始" :
-      task.status === "step-done" ? "上一步已完成" : task.note || task.step;
+    detail.textContent = task.status === "queued" ? "还没开始" : resumeAction(task);
     copy.append(title, detail);
     const actions = document.createElement("div");
     actions.className = "actions";
@@ -330,6 +513,11 @@ function renderTasks() {
     item.append(copy, actions);
     return item;
   }));
+}
+
+function resumeAction(task) {
+  if (task.status === "step-done") return nextStep(task).trim() || "给自己定一个小动作。";
+  return task.step || suggest(task.title);
 }
 
 function taskStatus(task) {
@@ -410,13 +598,23 @@ function renderReviewDetail(task) {
   status.textContent = [taskStatus(task), parent && "来自「" + parent.title + "」"].filter(Boolean).join(" · ");
   detail.append(status);
   appendFields(detail, taskFields(task));
-  if (task.status === "completed" || task.id === state.activeId) return;
+  if (task.status === "completed") {
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const reopen = rowButton("撤销完成", "撤销完成：" + task.title, () => reopenTask(task));
+    reopen.disabled = starting;
+    actions.append(reopen, rowButton("移除任务", "移除任务：" + task.title,
+      () => removeTask(task, $("review-heading"))));
+    detail.append(actions);
+    return;
+  }
+  if (task.id === state.activeId) return;
   const text = task.status === "queued" ? "开始这件事" : "接回来";
   const open = rowButton(text, text + "：" + task.title, () => {
     if (!openSavedTask(task) || !matchMedia("(max-width: 759px)").matches) return;
     reviewOpen = false;
     renderReview();
-    $(task.status === "step-done" ? "next-step" : "step").focus();
+    focusTaskStep();
   });
   open.disabled = starting;
   detail.append(open);
@@ -432,7 +630,7 @@ function summaryFields(task) {
     next = "已完成。";
   } else if (stepDone) {
     position = task.step ? "已完成这一步：" + task.step : "上一步已完成。";
-    next = task.nextDraft?.trim() || "还没写下一步。";
+    next = nextStep(task).trim() || "还没写下一步。";
   } else if (task.status === "queued") {
     position = "还没开始。";
   }
@@ -467,6 +665,54 @@ function renderSummary() {
     return item;
   }));
 }
+
+function localDay(date) {
+  const day = new Date(date);
+  if (Number.isNaN(day.getTime())) return "";
+  const month = String(day.getMonth() + 1).padStart(2, "0");
+  const dateOfMonth = String(day.getDate()).padStart(2, "0");
+  return day.getFullYear() + "-" + month + "-" + dateOfMonth;
+}
+
+function renderDailySummary() {
+  const today = localDay(new Date());
+  const dateInput = $("daily-date");
+  if (!dateInput.value) dateInput.value = today;
+  const day = dateInput.value;
+  let stepsDone = 0;
+  let tasksDone = 0;
+  const rows = [];
+  for (const task of state.tasks) {
+    const finished = task.status === "completed" && task.completedAt && localDay(task.completedAt) === day;
+    const steps = (task.completedSteps ?? []).filter((_, index) => {
+      const time = task.completedStepTimes?.[index];
+      return time && localDay(time) === day;
+    });
+    if (!finished && !steps.length) continue;
+    stepsDone += steps.length;
+    tasksDone += Number(!!finished);
+    const item = document.createElement("li");
+    const title = document.createElement("strong");
+    title.textContent = task.title;
+    item.append(title);
+    appendFields(item, [
+      ["完成的小步", steps],
+      ["整件事已完成", finished ? task.result || "已完成" : ""],
+      ["接下来", day === today && task.status !== "completed"
+        ? task.draft?.step?.trim() || resumeAction(task) : ""],
+    ]);
+    rows.push(item);
+  }
+  $("daily-overview").textContent = rows.length
+    ? "做了 " + stepsDone + " 小步 · 完成 " + tasksDone + " 件事"
+    : "这一天还没有完成记录。";
+  $("daily-items").replaceChildren(...rows);
+}
+
+$("daily-summary").addEventListener("toggle", () => {
+  if ($("daily-summary").open) renderDailySummary();
+});
+$("daily-date").addEventListener("change", renderDailySummary);
 
 function renderReview() {
   if (!state.tasks.length) reviewOpen = false;
@@ -676,11 +922,50 @@ function renderShelf() {
   }));
 }
 
+const studyTask = /复习|学习|刷题|课程|备考|课件/;
+const firstStudyStep = "打开最近一节课的学习材料，圈出一个你还说不清的概念。";
+
+function suggestPlan(title) {
+  if (/论文|报告|文档|写作/.test(title)) return [
+    "打开对应文档，先写一条想讲的要点。",
+    "在要点下面加一个例子或一条手边有的证据。",
+    "读一遍刚写的内容，补一句它说明了什么。",
+  ];
+  if (/邮件|回复|回信/.test(title)) return [
+    "打开那封邮件，先写一句你想回复的重点。",
+    "把刚才的重点写进回复草稿，需要的话补一个细节。",
+    "重读草稿，核对收件人和需要的附件，再决定是否发出。",
+  ];
+  if (studyTask.test(title)) return [
+    firstStudyStep,
+    "用一句话解释刚圈出的概念，再翻开材料核对。",
+    "找一道和刚才内容有关的题，只写第一步解法。",
+  ];
+  return [
+    "把做这件事最先用到的一样东西放到手边。",
+    "挑一小块已经知道怎么做的内容，先动手做两分钟。",
+    "看一眼刚完成的部分，留下一句下次从哪儿继续。",
+  ];
+}
+
 function suggest(title) {
-  if (/论文|报告|文档|写作/.test(title)) return "打开对应文档，先写一条想讲的要点。";
-  if (/邮件|回复|回信/.test(title)) return "打开那封邮件，先写一句你想回复的重点。";
-  if (/复习|学习|刷题/.test(title)) return "打开学习材料，挑一道题或一小段先看。";
-  return "打开要用的材料，写下一个两分钟内能动手的动作。";
+  return suggestPlan(title)[0];
+}
+
+function suggestContinuation(task) {
+  const completed = task.completedSteps ?? [];
+  const [first, ...rest] = suggestPlan(task.title);
+  if (first === firstStudyStep && !completed.includes(first)) {
+    rest[0] = "合上学习材料，凭记忆写下一句刚复习的内容，再翻开核对。";
+  }
+  return rest.find(step => !completed.includes(step)) ?? "";
+}
+
+function smallerAction(action) {
+  const first = action.split(/[，,；;]/, 1)[0].trim();
+  if (first && first !== action) return /[。！？.!?]$/.test(first) ? first : first + "。";
+  if (studyTask.test(action) && !action.startsWith("找到")) return "找到最近一节课的学习材料。";
+  return "";
 }
 
 function submit(id, action) {
@@ -690,14 +975,9 @@ function submit(id, action) {
   });
 }
 let ai = null;
+let adjusting = false;
 const localRelay = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
 if (localRelay) $("ai-endpoint").value = new URL("/api/step", location.origin).href;
-
-$("ai-settings-link").addEventListener("click", event => {
-  event.preventDefault();
-  $("ai-settings").open = true;
-  $("ai-endpoint").focus();
-});
 
 submit("ai-form", () => {
   let endpoint;
@@ -720,7 +1000,10 @@ submit("ai-form", () => {
   $("ai-token").value = "";
   $("ai-mode").textContent = "AI 模式";
   $("ai-off").hidden = false;
-  $("ai-status").textContent = "已启用。点击「出发咯」时会连接 " + endpoint.host + "。";
+  $("ai-status").textContent = "已启用。需要 AI 建议时会连接 " + endpoint.host + "。";
+  if (stepSuggestion?.pending) stepSuggestion = null;
+  renderStepSuggestion();
+  renderAdjustment();
 });
 
 $("ai-off").onclick = () => {
@@ -729,9 +1012,17 @@ $("ai-off").onclick = () => {
   $("ai-off").hidden = true;
   $("ai-mode").textContent = "离线模式";
   $("ai-status").textContent = "已切回离线模板。";
+  if (stepSuggestion?.pending) stepSuggestion = null;
+  renderStepSuggestion();
+  renderAdjustment();
 };
 
-async function requestStep(title, config) {
+function renderAdjustment() {
+  $("adjust-plan").hidden = !ai || activeTask()?.status === "paused";
+  $("adjust-submit").disabled = adjusting;
+}
+
+async function requestSteps(title, config, revision) {
   const headers = { "Content-Type": "application/json" };
   if (config.token) headers.Authorization = "Bearer " + config.token;
   const response = await fetch(config.endpoint, {
@@ -740,45 +1031,139 @@ async function requestStep(title, config) {
     credentials: "omit",
     redirect: "error",
     signal: AbortSignal.timeout(15000),
-    body: JSON.stringify({ task: title, prompt: config.prompt }),
+    body: JSON.stringify({ task: title, prompt: config.prompt, revision }),
   });
   if (response.status === 401 || response.status === 403) throw new Error("接口未授权，请检查访问令牌");
   if (response.status === 429) throw new Error("接口暂时限流，请稍后重试");
   if (!response.ok) throw new Error("接口暂不可用");
   const result = await response.json();
-  const step = typeof result?.step === "string" ? result.step.trim() : "";
-  if (!step || step.length > 500) throw new Error("接口没有返回可用的步骤");
-  return step;
+  const steps = Array.isArray(result?.steps) ? result.steps : revision ? [] : [result?.step];
+  if (steps.length < 1 || steps.length > 3 ||
+      steps.some(step => typeof step !== "string" || !step.trim() || step.trim().length > 500)) {
+    throw new Error(revision ? "接口没有返回调整后的清单" : "接口没有返回可用的步骤");
+  }
+  return steps.map(step => step.trim());
 }
+
+function connectionError(error) {
+  if (error.name === "TimeoutError") return "连接超时";
+  if (error.name === "TypeError" || error.name === "SyntaxError") return "接口连接或返回格式有误";
+  return error.message;
+}
+
+function suggestionField(task) {
+  return $(task.status === "step-done" ? "next-step" : "step");
+}
+
+function renderStepSuggestion(task = activeTask()) {
+  const visible = task?.status === "working" || task?.status === "step-done";
+  $("step-help").hidden = !visible;
+  if (!visible || (stepSuggestion && (stepSuggestion.taskId !== task.id ||
+      stepSuggestion.status !== task.status || stepSuggestion.input !== suggestionField(task).value))) {
+    stepSuggestion = null;
+  }
+  const pending = !!stepSuggestion?.pending;
+  const ready = !!stepSuggestion?.text;
+  $("suggest-step").setAttribute("aria-disabled", String(pending));
+  $("step-suggestion").toggleAttribute("data-ready", ready);
+  $("suggestion-message").textContent = pending ? "正在找一个小动作…" : stepSuggestion?.message ?? "";
+  $("suggestion-actions").hidden = !ready;
+  $("smaller-suggestion").hidden = !ready || (!ai && !smallerAction(stepSuggestion.text));
+  $("smaller-suggestion").setAttribute("aria-disabled", String(pending));
+  $("use-suggestion").setAttribute("aria-disabled", String(pending));
+}
+
+async function showStepSuggestion(smaller = false) {
+  const task = activeTask();
+  if (!task || task.status === "paused" || stepSuggestion?.pending) return;
+  const previous = smaller ? stepSuggestion?.text : "";
+  if (smaller && !previous) return;
+  const input = suggestionField(task).value;
+  const text = input.trim();
+  const next = task.status === "step-done" ? suggestContinuation(task) : "";
+  const completed = task.completedSteps ?? [];
+  const continuing = task.status === "step-done" && (!text || text === next);
+  const topic = continuing ? task.title : text || task.title;
+  const config = ai;
+  const suggestion = { taskId: task.id, status: task.status, input, pending: !!config, text: previous };
+  stepSuggestion = suggestion;
+  let action = smaller ? smallerAction(previous) : continuing ? next : suggest(topic);
+  let message = action;
+  if (config) {
+    renderStepSuggestion(task);
+    try {
+      const revision = smaller || continuing ? {
+        feedback: smaller ? "把上一条建议拆成一个更容易立刻动手的动作，只做最前面的一小段。"
+          : "根据已经做完的内容，给一个现在能接着做的小动作。",
+        completed_steps: continuing ? completed.slice(-8) : [],
+        remaining_steps: smaller ? [previous] : [],
+      } : undefined;
+      const [suggested] = await requestSteps(topic, config, revision);
+      if (suggested !== previous) action = suggested;
+      message = action;
+    } catch {
+      if (action) message = "先试试这个离线建议。 " + action;
+    }
+  }
+  if (stepSuggestion !== suggestion) return;
+  if (!action) {
+    action = previous;
+    message = previous ? previous : "想继续的话，可以写下一个现在做得到的小动作。";
+  }
+  Object.assign(suggestion, { text: action, message, pending: false });
+  renderStepSuggestion();
+}
+
+$("suggest-step").onclick = () => showStepSuggestion();
+$("smaller-suggestion").onclick = () => showStepSuggestion(true);
+
+$("use-suggestion").onclick = () => {
+  const task = activeTask();
+  renderStepSuggestion(task);
+  if (!stepSuggestion?.text || stepSuggestion.pending) return;
+  const field = suggestionField(task);
+  const edited = taskWithEdits(task);
+  const stepKey = task.status === "step-done" ? "nextDraft" : "step";
+  const next = { ...edited, [stepKey]: stepSuggestion.text };
+  if (updateTask(next, "已填入建议。")) {
+    stepSuggestion = null;
+    renderStepSuggestion();
+    field.focus();
+  }
+};
 
 submit("start", async () => {
   const title = $("task").value.trim();
   if (!title || starting || activeTask()) return;
   const config = ai;
-  let step = suggest(title);
-  let message = "已找到一个起点。";
+  let steps = suggestPlan(title);
+  let message = "第一步准备好了。";
   if (config) {
     const button = $("start-task");
     starting = true;
     button.disabled = true;
     $("save-task").disabled = true;
+    $("task-example").disabled = true;
+    $("clear-task-draft").disabled = true;
+    $("recap-reopen").disabled = true;
     $("task").readOnly = true;
-    button.textContent = "正在找第一步…";
+    button.textContent = "正在拆小步…";
     $("notice").textContent = "正在连接 AI 接口。";
     renderTasks();
     renderShelf();
     try {
-      step = await requestStep(title, config);
-      message = "AI 找到了一个起点，你可以再改小一点。";
+      steps = await requestSteps(title, config);
+      message = "建议已放进任务清单，先看看眼前这一步。";
     } catch (error) {
-      const reason = error.name === "TimeoutError" ? "连接超时" :
-        error.name === "TypeError" || error.name === "SyntaxError" ? "接口连接或返回格式有误" : error.message;
-      message = reason + "。这次先用离线建议。";
+      message = connectionError(error) + "。这次先用离线建议。";
       $("ai-status").textContent = message;
     } finally {
       starting = false;
       button.disabled = false;
       $("save-task").disabled = false;
+      $("task-example").disabled = false;
+      $("clear-task-draft").disabled = false;
+      $("recap-reopen").disabled = false;
       $("task").readOnly = false;
       button.textContent = "出发咯";
       $("notice").textContent = "";
@@ -786,8 +1171,56 @@ submit("start", async () => {
       renderShelf();
     }
   }
-  activate(newTask(title, step), message, { consumeStartDraft: true });
+  const [step, ...upcomingSteps] = steps;
+  activate({ ...newTask(title, step), upcomingSteps }, message, { consumeStartDraft: true });
 });
+
+submit("adjust-form", async () => {
+  const task = activeTask();
+  const config = ai;
+  const feedback = $("adjust-feedback").value.trim();
+  if (!config || adjusting || !task || task.status === "paused" || !feedback) return;
+  const stepDone = task.status === "step-done";
+  const field = $(stepDone ? "next-step" : "step");
+  const currentText = field.value;
+  const upcoming = task.upcomingSteps ?? [];
+  const remainingSteps = [currentText.trim(), ...(stepDone ? upcoming.slice(1) : upcoming)].filter(Boolean);
+  const status = $("adjust-status");
+  adjusting = true;
+  renderAdjustment();
+  status.textContent = "正在调整剩下的步骤…";
+  try {
+    const steps = await requestSteps(task.title, config, {
+      feedback,
+      remaining_steps: remainingSteps,
+      completed_steps: (task.completedSteps ?? []).slice(-8),
+    });
+    const current = activeTask();
+    if (current?.id !== task.id) return;
+    if (ai !== config || current.status !== task.status || current.completedSteps !== task.completedSteps ||
+        current.upcomingSteps !== task.upcomingSteps || field.value !== currentText ||
+        $("adjust-feedback").value.trim() !== feedback) {
+      status.textContent = "等待时内容已更新，可以按现在的进度再调整一次。";
+      return;
+    }
+    const edited = taskWithEdits(current);
+    const next = stepDone
+      ? workingOnStep(edited, steps[0], steps.slice(1))
+      : { ...edited, step: steps[0], upcomingSteps: steps.slice(1) };
+    if (updateTask(next, "剩下的步骤已调整。")) {
+      $("adjust-feedback").value = "";
+      status.textContent = "清单已更新，可以继续手动修改。";
+    } else {
+      status.textContent = "调整暂未保存，原清单还在。";
+    }
+  } catch (error) {
+    if (activeTask()?.id === task.id) status.textContent = connectionError(error) + "。原清单还在。";
+  } finally {
+    adjusting = false;
+    renderAdjustment();
+  }
+});
+
 $("save-task").onclick = () => {
   if (!starting && !activeTask()) saveTask($("task"));
 };
@@ -805,33 +1238,90 @@ submit("pause-form", () => {
 $("resume").onclick = () => {
   const task = activeTask();
   if (task?.status !== "paused") return;
-  if (updateTask({ ...task, status: "working" }, "从这里接着来。")) $("step").focus();
+  if (updateTask({ ...task, status: "working" }, "从这里接着来。")) focusTaskStep();
 };
-$("park-task").onclick = () => {
+function parkTask(message, focusId) {
   const task = activeTask();
-  if (task?.status !== "paused") return;
+  if (!task) return;
+  const parked = taskForReturn(task);
+  const tasks = state.tasks.map(item => item.id === parked.id ? parked : item);
   const returnTrail = [...state.returnTrail.filter(id => id !== task.id), task.id];
-  if (commit({ ...state, activeId: null, returnTrail }, "书签已留在待接回。")) $("task").focus();
-};
-$("done").onclick = () => {
+  if (commit({ ...state, tasks, activeId: null, returnTrail }, message)) $(focusId).focus();
+}
+
+$("park-task").onclick = () => parkTask("书签已留在待接回。", "task");
+$("stop-today").onclick = () => parkTask("今天的进度已留好。", "return-task");
+
+function workingOnStep(task, step, upcomingSteps) {
+  return { ...task, step, upcomingSteps, note: "", nextDraft: undefined, status: "working" };
+}
+
+function completeCurrentStep() {
   const task = activeTask();
-  if (task?.status !== "working") return;
+  if (task?.status !== "working") return false;
   const edited = taskWithEdits(task);
-  const completedSteps = [...(task.completedSteps ?? []), edited.step];
-  if (updateTask({ ...edited, completedSteps, status: "step-done" }, "这一步完成了。")) $("next-step").focus();
+  const previousSteps = task.completedSteps ?? [];
+  const completedSteps = [...previousSteps, edited.step];
+  const completedStepTimes = previousSteps.map((_, index) => task.completedStepTimes?.[index] ?? null);
+  completedStepTimes.push(new Date().toISOString());
+  const checked = { ...edited, completedSteps, completedStepTimes, nextDraft: undefined, status: "step-done" };
+  const [step, ...remaining] = task.upcomingSteps ?? [];
+  const next = step ? workingOnStep(checked, step, remaining) : checked;
+  if (!updateTask(next, "", () => {
+    lastCheck = { taskId: task.id, status: next.status, note: edited.note, animate: true };
+    $("step-editor").open = false;
+    $("bookmark-options").open = false;
+    render();
+  })) return false;
+  focusTaskStep();
+  return true;
+}
+
+$("undo-step").onclick = () => {
+  const task = activeTask();
+  if (!lastCheck || task?.id !== lastCheck.taskId || task.status !== lastCheck.status) return;
+  const edited = taskWithEdits(task);
+  const pending = task.upcomingSteps ?? [];
+  const nextDraft = (task.draft?.nextDraft ?? task.nextDraft)?.trim();
+  const upcomingSteps = task.status === "working" ? [edited.step, ...pending] :
+    nextDraft ? [nextDraft, ...pending.slice(1)] : pending;
+  const previous = {
+    ...workingOnStep(edited, task.completedSteps.at(-1), upcomingSteps),
+    note: edited.note || lastCheck.note,
+    completedSteps: task.completedSteps.slice(0, -1),
+    completedStepTimes: task.completedStepTimes.slice(0, -1),
+  };
+  if (updateTask(previous, "已撤销勾选。", () => {
+    lastCheck = null;
+    render();
+  })) focusTaskStep();
 };
-submit("next-form", () => {
+
+function continueTask() {
   const task = activeTask();
   const step = $("next-step").value.trim();
   if (task?.status !== "step-done" || !step) return;
-  const next = { ...taskWithEdits(task), step, note: "", nextDraft: "", status: "working" };
-  if (updateTask(next, "下一步已保存。")) $("step").focus();
-});
+  const upcomingSteps = (task.upcomingSteps ?? []).slice(1);
+  const next = workingOnStep(taskWithEdits(task), step, upcomingSteps);
+  if (updateTask(next, "下一步准备好了。")) {
+    $("step-editor").open = false;
+    focusTaskStep();
+  }
+}
+submit("next-form", continueTask);
+$("continue-step").onclick = () => {
+  if ($("next-step").value.trim()) {
+    continueTask();
+  } else {
+    $("step-editor").open = true;
+    $("suggest-step").focus();
+  }
+};
 $("finish-task").onclick = () => {
   const task = activeTask();
   if (task?.status !== "step-done") return;
   const finished = {
-    ...taskWithEdits(task), status: "completed", nextDraft: "", completedAt: new Date().toISOString(),
+    ...taskWithEdits(task), status: "completed", completedAt: new Date().toISOString(),
   };
   const tasks = state.tasks.map(item => item.id === task.id ? finished : item);
   const returnTrail = state.returnTrail.filter(id => id !== task.id);
@@ -842,11 +1332,31 @@ $("finish-task").onclick = () => {
     $("recap-heading").focus();
   }
 };
+
+function reopenTask(task) {
+  if (task?.status !== "completed") return;
+  const status = task.completedSteps?.length ? "step-done" : "paused";
+  const reopened = { ...task, status, completedAt: undefined };
+  if (activate(reopened, "已撤销完成，可以接着做。") && reviewOpen) {
+    reviewOpen = false;
+    renderReview();
+    focusTaskStep();
+  }
+}
+
 $("recap-close").onclick = () => {
   recapId = null;
   renderRecap();
   renderDeskIndex();
-  ($("return-prompt").hidden ? $("task") : $("return-task")).focus();
+  $("task").focus();
+};
+$("recap-reopen").onclick = () => reopenTask(state.tasks.find(task => task.id === recapId));
+$("recap-daily").onclick = () => {
+  $("daily-date").value = localDay(new Date());
+  $("daily-summary").open = true;
+  renderDailySummary();
+  $("daily-summary").scrollIntoView({ block: "start" });
+  $("daily-summary").querySelector("summary").focus({ preventScroll: true });
 };
 submit("distraction-form", () => {
   const input = $("distraction-reason");

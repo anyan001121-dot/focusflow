@@ -4,8 +4,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FocusFlow 工作台</title>
 <link rel="icon" href="art/logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="desk.css?v=workbench-1">
-<script defer src="desk.js?v=workbench-1"></script>
+<link rel="stylesheet" href="desk.css?v=workbench-6">
+<script defer src="desk.js?v=workbench-6"></script>
 <main>
 <header>
 <a class="brand" href="../"><img src="art/logo.svg" width="38" height="38" alt="">FocusFlow</a>
@@ -21,28 +21,41 @@
 <a href="#recap-heading" data-needs="task-recap" hidden>任务回顾</a>
 <a href="#review-heading" data-review-link hidden>回看任务</a>
 <a href="#summary-options" data-review-link hidden>汇总任务</a>
+<a href="#daily-summary" data-work-link>每日总结</a>
 <a href="#ai-settings" data-work-link>AI 设置</a>
 </nav>
 <p id="storage-notice" role="status" hidden></p>
 <div class="workbench-grid">
 <div id="focus-pane">
 <div id="return-prompt" class="return-prompt" hidden>
-<div><strong>刚才那件事</strong><p id="return-title"></p><p id="return-context" class="optional"></p></div>
+<div>
+<p id="return-title"></p>
+<dl class="return-details">
+<div id="return-done-row"><dt>刚做完</dt><dd id="return-done"></dd></div>
+<div><dt>接下来</dt><dd id="return-context"></dd></div>
+<div id="return-note-row"><dt>留给自己的话</dt><dd id="return-bookmark"></dd></div>
+</dl>
+</div>
+<div class="actions return-actions">
 <button id="return-task" type="button">接回来</button>
+<button id="remove-return-task" class="text-action" type="button">移除</button>
+</div>
 </div>
 <section id="task-recap" aria-labelledby="recap-heading" hidden>
-<div class="shelf-head">
 <h2 id="recap-heading" tabindex="-1">任务回顾</h2>
-<button id="recap-close" class="quiet" type="button">收起回顾</button>
-</div>
 <p id="recap-title"></p>
 <div id="recap-fields"></div>
+<div class="actions">
+<button id="recap-close" type="button">开始另一件事</button>
+<button id="recap-reopen" class="quiet" type="button">撤销完成</button>
+<button id="recap-daily" class="text-action" type="button">看今日总结</button>
+</div>
 </section>
 <section id="draft" aria-labelledby="draft-heading">
 <div class="intro">
 <div>
 <h1 id="draft-heading" tabindex="-1"><span>想做什么？</span><span>从一小步开始。</span></h1>
-<p>写下你想做的事，让 FocusFlow 帮你看看从哪里开始。</p>
+<p>写一句你想做的事，FocusFlow 帮你拆成几小步。</p>
 </div>
 <img class="sprout" src="art/sprout-detail.svg" width="84" height="88" alt="">
 </div>
@@ -50,37 +63,87 @@
 <label for="task">先写下眼前这件事</label>
 <textarea id="task" rows="3" required maxlength="500" placeholder="比如，写论文的讨论部分"></textarea>
 <p id="start-draft-status" class="draft-status optional" role="status"></p>
+<button id="task-example" class="text-action" type="button">试试「我需要复习课程」</button>
 <div class="actions">
 <button id="start-task" class="with-icon icon-start">出发咯</button>
 <button id="save-task" class="quiet" type="button">先存起来</button>
+<button id="clear-task-draft" class="text-action" type="button" hidden>清空输入</button>
 </div>
 </form>
-<p class="ai-invitation">接入你自己的 AI，体验完整的 AI 模式，让第一步更贴合你眼前的任务。 <a id="ai-settings-link" href="#ai-settings">去设置 AI</a></p>
 <img class="step-path" src="art/first-step.svg" width="660" height="150" alt="">
 </section>
-<section id="current" aria-labelledby="state-heading" hidden>
+<section id="current" aria-labelledby="goal" hidden>
+<div class="current-title">
 <h1 id="goal"></h1>
-<h2 id="state-heading" tabindex="-1">眼前这一小步</h2>
+<div class="actions task-title-actions">
+<button id="park-task" class="text-action" type="button">先做别的</button>
+<details id="task-options">
+<summary>任务操作</summary>
+<button id="clear-active-task" class="quiet" type="button">清空这个任务</button>
+</details>
+</div>
+</div>
+<section id="step-checklist" aria-labelledby="state-heading">
+<div class="shelf-head checklist-heading">
+<h2 id="state-heading" tabindex="-1">任务清单</h2>
+<span id="checklist-progress" class="optional"></span>
+</div>
+<progress id="step-progress" value="0" max="1" aria-label="小步完成进度"></progress>
+<ol id="checklist-steps"></ol>
+<div class="actions" id="completion-feedback">
+<p id="step-feedback" role="status"></p>
+<button id="undo-step" class="text-action" type="button" hidden>撤销勾选</button>
+</div>
+</section>
 <p id="return-note" hidden></p>
+<div id="after-steps" class="actions" hidden>
+<button id="finish-task" type="button">完成这件事</button>
+<button id="continue-step" class="quiet" type="button">再做一步</button>
+<button id="stop-today" class="text-action" type="button">今天先到这儿</button>
+</div>
+<details id="step-editor">
+<summary>调整步骤</summary>
 <p id="task-draft-status" class="draft-status optional" role="status"></p>
 <form id="step-form">
-<label for="step">这一步可以自己改</label>
+<label for="step">修改眼前这一步</label>
 <textarea id="step" rows="2" required maxlength="500"></textarea>
-<div id="step-actions" class="actions">
-<button id="done" type="button" class="with-icon icon-complete">这一步完成了</button>
 <button class="quiet">保存步骤</button>
-</div>
 </form>
+<form id="next-form" hidden>
+<label for="next-step">修改或添加下一步</label>
+<textarea id="next-step" rows="2" required maxlength="500"></textarea>
+<button class="quiet">用这一步继续</button>
+</form>
+<div id="edit-upcoming"></div>
+<div id="step-help" hidden>
+<button id="suggest-step" class="quiet" type="button" aria-controls="step-suggestion">给我一步建议</button>
+<div id="step-suggestion">
+<p id="suggestion-message" role="status"></p>
+<div id="suggestion-actions" class="actions" hidden>
+<button id="use-suggestion" class="quiet" type="button">用这一步</button>
+<button id="smaller-suggestion" class="text-action" type="button">再小一点</button>
+</div>
+</div>
+</div>
+<details id="adjust-plan" hidden>
+<summary>请 AI 调整步骤</summary>
+<form id="adjust-form">
+<label for="adjust-feedback">哪里卡住了？</label>
+<textarea id="adjust-feedback" rows="2" maxlength="400" required placeholder="比如，我只有五分钟，或者资料还没拿到"></textarea>
+<p class="optional">会把任务、补充提示、这次反馈和清单进度发给你的 AI 接口。</p>
+<button class="quiet" id="adjust-submit">重新安排剩下的步骤</button>
+</form>
+<p id="adjust-status" class="optional" role="status"></p>
+</details>
+</details>
+<details id="bookmark-options">
+<summary>暂停与书签</summary>
 <form id="pause-form">
 <label for="note">给回来的自己留句话 <span class="optional">选填</span></label>
 <input id="note" maxlength="500" placeholder="比如，接着看结果章节的第二段">
 <button class="quiet with-icon icon-pause">暂停并留下书签</button>
 </form>
-<form id="next-form" hidden>
-<label for="next-step">接下来想做哪一小步？</label>
-<textarea id="next-step" rows="2" required maxlength="500"></textarea>
-<button>继续下一步</button>
-</form>
+</details>
 <details id="result-box" hidden>
 <summary>留个回顾（选填）</summary>
 <label for="task-result">这件事有什么结果？</label>
@@ -90,8 +153,6 @@
 </details>
 <div class="actions">
 <button id="resume" hidden>接着来</button>
-<button id="park-task" class="quiet" hidden>先做别的</button>
-<button id="finish-task" class="quiet" hidden>结束这件事</button>
 </div>
 <details id="distraction-box" hidden>
 <summary>记一次分神 <span id="distraction-count" class="optional" aria-live="polite"></span></summary>
@@ -165,9 +226,16 @@
 </form>
 <ul id="thoughts"></ul>
 </section>
+<details id="daily-summary">
+<summary>每日总结</summary>
+<label for="daily-date">选择日期</label>
+<input id="daily-date" type="date">
+<p id="daily-overview"></p>
+<ul id="daily-items"></ul>
+</details>
 <details class="ai-settings" id="ai-settings">
 <summary>AI 设置</summary>
-<p>默认用离线模板。启用 AI 后，点击「出发咯」会把输入的任务和补充提示发送到你的接口，用来生成第一步。</p>
+<p>默认用离线模板。启用 AI 后，点「出发咯」会向你的接口发送任务和补充提示。点「给我一步建议」时，会发送眼前输入框里的文字和补充提示。输入框空着时，会用任务名称和已有步骤进度来建议。</p>
 <form id="ai-form" autocomplete="off">
 <label for="ai-endpoint">AI 接口地址</label>
 <input id="ai-endpoint" type="url" placeholder="https://你的服务/api/step" required maxlength="500">
@@ -185,7 +253,8 @@
 <details class="api-help">
 <summary>怎么配置接口？</summary>
 <p>本机运行时，在服务端环境配置 <code>OPENAI_API_KEY</code>，然后在项目目录执行 <code>python3 scripts/browser_ai.py</code>。打开终端显示的网页，展开这里并点击「启用 AI」。</p>
-<p>使用自己的 HTTPS 接口时，接口需允许当前网页来源，并接收 POST JSON <code>{ task, prompt }</code>，返回 JSON <code>{ step }</code>。有访问令牌时，网页通过 Bearer 请求头发送。</p>
+<p>自己的 HTTPS 接口需允许当前网页来源，接收 POST JSON <code>{ task, prompt }</code>，返回 <code>{ steps: ["第一步", "第二步"] }</code>。只返回 <code>{ step }</code> 的接口仍可以给出第一步。有访问令牌时，网页通过 Bearer 请求头发送。</p>
+<p>调整时，网页额外发送 <code>revision</code>，包含 <code>feedback</code>、<code>remaining_steps</code> 和最近的 <code>completed_steps</code>。支持调整的接口请返回 <code>{ steps }</code>。</p>
 </details>
 </details>
 </div>
