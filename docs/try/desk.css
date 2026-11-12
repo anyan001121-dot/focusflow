@@ -105,7 +105,7 @@ button:hover { box-shadow: inset 0 0 0 2px currentColor; }
 #park-task { flex: none; }
 .task-title-actions { align-items: start; }
 #task-options summary { padding: 9px 4px; min-height: 44px; color: var(--muted); cursor: pointer; font-size: 14px; }
-#clear-active-task { margin: 0 0 8px; }
+#task-options button { display: block; margin: 0 0 8px; }
 #goal { font-size: clamp(24px, 4vw, 37px); overflow-wrap: anywhere; }
 #state-heading { margin-top: 6px; color: var(--muted); font-size: 16px; font-weight: 650; }
 :is(#step-form, #next-form) { margin-bottom: 0; }
@@ -164,6 +164,9 @@ button:hover { box-shadow: inset 0 0 0 2px currentColor; }
 #shortcut-label { margin: 0 0 4px; }
 #distraction-box .distraction-shortcuts { margin: 2px 0 12px; }
 #step-checklist { margin: 14px 0; }
+#plan-source { margin: 0; }
+#plan-clarification > summary { min-height: 44px; padding: 9px 0; cursor: pointer; font-size: 14px; }
+#clarify-form { margin-top: 4px; }
 .checklist-heading { gap: 4px 12px; }
 .checklist-heading #state-heading { margin: 0; }
 #step-progress {
@@ -325,7 +328,9 @@ button:hover { box-shadow: inset 0 0 0 2px currentColor; }
 .return-details > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px; }
 .return-details dt { font-weight: 650; color: var(--muted); }
 .return-details dd { margin: 0; overflow-wrap: anywhere; }
-#storage-notice { padding: 8px 14px; background: var(--paper); border-left: 4px solid var(--ribbon); }
+#storage-recovery { margin: 12px 0; padding: 8px 14px; background: var(--paper); border-left: 4px solid var(--ribbon); }
+#storage-notice { margin: 0; }
+#retry-storage { margin-top: 8px; }
 #task-review {
   padding: clamp(17px, 2vw, 24px);
   background: var(--paper);

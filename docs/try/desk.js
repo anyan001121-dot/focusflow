@@ -4,6 +4,7 @@ const legacyKey = "focusflow.browser.v1";
 const $ = id => document.getElementById(id);
 let state = { activeId: null, tasks: [], thoughts: [], returnTrail: [] };
 let stored = null;
+let storageReadFailed = false;
 let starting = false;
 let stepSuggestion = null;
 let lastCheck = null;
@@ -68,40 +69,91 @@ function newTask(title, step = "", parentId = null) {
 
 function storageNotice(message) {
   $("storage-notice").textContent = message;
-  $("storage-notice").hidden = !message;
+  $("storage-recovery").hidden = !message;
+  $("retry-storage").hidden = !storageReadFailed;
+}
+
+const readFailure = "暂时无法读取本地任务。原记录已保留，可以重新读取。";
+const savedStatuses = ["queued", "working", "paused", "step-done", "completed"];
+const isText = value => typeof value === "string";
+const isRecord = value => !!value && typeof value === "object" && !Array.isArray(value);
+const isTextList = value => Array.isArray(value) && value.every(isText);
+
+function validSavedTask(task) {
+  return isRecord(task) && isText(task.id) && !!task.id && isText(task.title) &&
+    !!task.title.trim() && isText(task.step) && savedStatuses.includes(task.status) &&
+    [task.upcomingSteps, task.completedSteps, task.distractions].every(value =>
+      value === undefined || isTextList(value)) &&
+    [task.note, task.nextDraft, task.result, task.nextExperiment, task.completedAt].every(value =>
+      value === undefined || isText(value)) &&
+    (task.draft === undefined || (isRecord(task.draft) && Object.values(task.draft).every(isText))) &&
+    (task.completedStepTimes === undefined || (Array.isArray(task.completedStepTimes) &&
+      task.completedStepTimes.every(value => value === null || isText(value)))) &&
+    (task.parentId == null || isText(task.parentId));
+}
+
+function readSavedState(raw) {
+  const saved = JSON.parse(raw);
+  if (!isRecord(saved) || !Array.isArray(saved.tasks) || !saved.tasks.every(validSavedTask) ||
+      !isTextList(saved.thoughts) || !isTextList(saved.returnTrail) ||
+      (saved.startDraft !== undefined && !isText(saved.startDraft))) {
+    throw new Error("invalid saved tasks");
+  }
+  const ids = new Set(saved.tasks.map(task => task.id));
+  if (ids.size !== saved.tasks.length ||
+      (saved.activeId !== null && !saved.tasks.some(task => task.id === saved.activeId &&
+        task.status !== "completed" && task.status !== "queued"))) {
+    throw new Error("invalid saved task IDs");
+  }
+  return saved;
 }
 
 try {
   stored = localStorage.getItem(storageKey);
   if (stored !== null) {
-    const saved = JSON.parse(stored);
-    if (!Array.isArray(saved.tasks) || !Array.isArray(saved.thoughts) || !Array.isArray(saved.returnTrail)) {
-      throw new Error("invalid saved tasks");
-    }
-    state = saved;
+    state = readSavedState(stored);
   } else {
-    const legacy = JSON.parse(localStorage.getItem(legacyKey));
-    if (Array.isArray(legacy?.thoughts)) state.thoughts = legacy.thoughts;
-    if (legacy?.task) {
-      const task = newTask(legacy.task.title, legacy.task.step);
-      task.note = legacy.task.note || "";
-      if (legacy.task.paused) task.status = "paused";
-      state.activeId = task.id;
-      state.tasks = [task];
+    const rawLegacy = localStorage.getItem(legacyKey);
+    if (rawLegacy !== null) {
+      const legacy = JSON.parse(rawLegacy);
+      if (!isRecord(legacy) || (legacy.thoughts !== undefined && !isTextList(legacy.thoughts)) ||
+          (legacy.task != null && (!isRecord(legacy.task) || !isText(legacy.task.title) ||
+            !legacy.task.title.trim() || (legacy.task.step !== undefined && !isText(legacy.task.step)) ||
+            (legacy.task.note !== undefined && !isText(legacy.task.note))))) {
+        throw new Error("invalid legacy tasks");
+      }
+      state.thoughts = legacy.thoughts ?? [];
+      if (legacy.task) {
+        const task = newTask(legacy.task.title, legacy.task.step);
+        task.note = legacy.task.note || "";
+        task.status = legacy.task.paused ? "paused" : "working";
+        state.activeId = task.id;
+        state.tasks = [task];
+      }
     }
   }
 } catch {
-  storageNotice("无法读取保存的进度。请检查浏览器的存储设置。");
+  storageReadFailed = true;
+  storageNotice(readFailure);
+  document.querySelector(".workbench-grid").inert = true;
+  deskIndex.inert = true;
+  bottomIndex.inert = true;
 }
+
+$("retry-storage").onclick = () => location.reload();
 
 const changedElsewhere = "另一个标签页更新了进度。请先保留本页未保存的文字，再刷新以继续。";
 window.addEventListener("storage", event => {
-  if ((event.key === storageKey || event.key === null) && event.newValue !== stored) {
+  if (!storageReadFailed && (event.key === storageKey || event.key === null) && event.newValue !== stored) {
     storageNotice(changedElsewhere);
   }
 });
 
 function commit(next, message, updateView = render) {
+  if (storageReadFailed) {
+    storageNotice(readFailure);
+    return false;
+  }
   try {
     if (localStorage.getItem(storageKey) !== stored) {
       storageNotice(changedElsewhere);
@@ -158,11 +210,7 @@ function activate(task, message, { thoughts = state.thoughts, consumeStartDraft 
   if (starting || task.id === state.activeId || task.status === "completed") return false;
   const current = activeTask();
   const parked = current && taskForReturn(current);
-  const next = { ...task };
-  if (!next.step && next.status !== "step-done") {
-    const [step, ...upcomingSteps] = suggestPlan(task.title);
-    Object.assign(next, { step, upcomingSteps });
-  }
+  const next = !task.step && task.status !== "step-done" ? taskWithPlan(task, localPlan(task.title), "local") : { ...task };
   if (next.status !== "step-done") next.status = "working";
   const tasks = state.tasks.map(item => {
     if (item.id === next.id) return next;
@@ -269,6 +317,16 @@ function render() {
       $("task-options").dataset.taskId = task.id;
     }
     $("goal").textContent = task.title;
+    $("detach-active-task").hidden = !task.parentId;
+    $("plan-source").textContent = task.planSource === "local" ? "清单来源 · 本地模板" :
+      task.planSource === "ai" ? "清单来源 · AI 建议" : "";
+    $("plan-source").hidden = !$("plan-source").textContent;
+    $("plan-clarification").hidden = !task.planNeedsDetail || paused || stepDone || !!task.completedSteps?.length;
+    if ($("plan-clarification").dataset.taskId !== task.id) {
+      $("plan-clarification").dataset.taskId = task.id;
+      $("plan-clarification").open = false;
+      $("plan-detail").value = "";
+    }
     $("state-heading").textContent = paused ? "暂停书签" : "任务清单";
     $("step").value = task.draft?.step ?? task.step;
     $("step").readOnly = paused;
@@ -457,6 +515,18 @@ function removeTask(task, focusTarget) {
 $("clear-active-task").onclick = () => {
   const task = activeTask();
   if (task) removeTask(task, $("task"));
+};
+
+function detachTask(task) {
+  const current = state.tasks.find(item => item.id === task.id);
+  if (!current?.parentId) return false;
+  const edited = current.id === state.activeId ? taskWithEdits(current) : current;
+  return updateTask({ ...edited, parentId: null }, "已移为独立任务。");
+}
+
+$("detach-active-task").onclick = () => {
+  const task = activeTask();
+  if (task && detachTask(task)) $("task-options").querySelector("summary").focus();
 };
 
 function renderTasks() {
@@ -876,6 +946,11 @@ function renderTaskTree() {
     if (!current) {
       actions.append(rowButton("移除", "移除任务：" + task.title, () => removeTask(task, $("tree-toggle"))));
     }
+    if (task.parentId) {
+      actions.append(rowButton("移为独立任务", "移为独立任务：" + task.title, () => {
+        if (detachTask(task)) $(button.id)?.focus();
+      }));
+    }
     if (actions.childElementCount) preview.append(actions);
     if (!completed) preview.append(childTaskForm(task));
     branch.append(preview);
@@ -899,19 +974,21 @@ $("tree-toggle").onclick = () => {
 };
 
 function renderShelf() {
-  $("thoughts").replaceChildren(...state.thoughts.map((thought, index) => {
+  const thoughts = state.thoughts;
+  $("thoughts").replaceChildren(...thoughts.map((thought, index) => {
     const item = document.createElement("li");
     const label = document.createElement("span");
     label.textContent = thought;
-    const remaining = () => state.thoughts.filter((_, position) => position !== index);
+    const remaining = () => thoughts.filter((_, position) => position !== index);
     const start = rowButton("先做这件", "先做这件：" + thought, () => {
-      const parentId = state.activeId;
-      activate(newTask(thought, "", parentId), parentId ? "原任务已留在待接回。" : "已开始这件事。", {
+      if (state.thoughts !== thoughts) return;
+      activate(newTask(thought), state.activeId ? "原任务已留在待接回。" : "已开始这件事。", {
         thoughts: remaining(),
       });
     });
     start.disabled = starting;
     const clear = rowButton("移除", "移除暂存事项：" + thought, () => {
+      if (state.thoughts !== thoughts) return;
       if (commit({ ...state, thoughts: remaining() }, "已移除暂存事项。", renderShelf)) $("thought").focus();
     });
     const actions = document.createElement("div");
@@ -922,40 +999,114 @@ function renderShelf() {
   }));
 }
 
-const studyTask = /复习|学习|刷题|课程|备考|课件/;
+const studyTask = /复习|学习|预习|刷题|课程|备考|课件/;
 const firstStudyStep = "打开最近一节课的学习材料，圈出一个你还说不清的概念。";
 
-function suggestPlan(title) {
-  if (/论文|报告|文档|写作/.test(title)) return [
-    "打开对应文档，先写一条想讲的要点。",
-    "在要点下面加一个例子或一条手边有的证据。",
-    "读一遍刚写的内容，补一句它说明了什么。",
-  ];
-  if (/邮件|回复|回信/.test(title)) return [
-    "打开那封邮件，先写一句你想回复的重点。",
-    "把刚才的重点写进回复草稿，需要的话补一个细节。",
-    "重读草稿，核对收件人和需要的附件，再决定是否发出。",
-  ];
-  if (studyTask.test(title)) return [
-    firstStudyStep,
-    "用一句话解释刚圈出的概念，再翻开材料核对。",
-    "找一道和刚才内容有关的题，只写第一步解法。",
-  ];
-  return [
-    "把做这件事最先用到的一样东西放到手边。",
-    "挑一小块已经知道怎么做的内容，先动手做两分钟。",
-    "看一眼刚完成的部分，留下一句下次从哪儿继续。",
-  ];
+function shortPhrase(text, limit = 32) {
+  const chars = Array.from(text.trim());
+  return chars.length > limit ? chars.slice(0, limit).join("") + "…" : chars.join("");
+}
+
+function localPlan(title, detail = "") {
+  const input = detail ? title + "，" + detail : title;
+  const clauses = input.split(/[，,。；;！？\n]/).map(part => part.trim()).filter(Boolean);
+  const minuteBudget = input.match(/(?:只有|只剩|最多|用时不超过)\s*(\d{1,3}|[一二两三四五六七八九十])\s*分钟/);
+  const numbers = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+  const minutes = minuteBudget ? Number(numbers[minuteBudget[1]] ?? minuteBudget[1]) : Infinity;
+  const datePattern = /今天|明天|后天|今晚|下周[一二三四五六日天]?|(?:周|星期)[一二三四五六日天]|\d{1,2}月\d{1,2}[日号]/;
+  const when = input.match(datePattern)?.[0] ?? "";
+  const intents = clauses.map(part => part.replace(/^(?:(?:记得|我需要|我想要|我想|我要|需要)\s*)+/, "")
+    .replace(datePattern, "").trim());
+
+  function plan(steps, needsDetail = false, mentionsDate = false) {
+    const limit = minutes <= 2 ? 1 : minutes <= 5 ? 2 : 3;
+    const prepared = when && !mentionsDate && when !== "今天" ?
+      ["为" + when + "先做一点准备。" + steps[0], ...steps.slice(1)] : steps;
+    return { steps: prepared.slice(0, limit), needsDetail };
+  }
+
+  const phone = intents.map(part => part.match(/^(?:给(.+?))?打(?:个|一个|一通)?电话(?:给(.+))?$/)).find(Boolean);
+  if (phone) {
+    const person = shortPhrase(phone[1] || phone[2] || "");
+    const purpose = person ? "给" + person + "打电话" : "打电话";
+    return plan([
+      "为" + when + purpose + "做准备，先确认要拨的号码。",
+      "记下一件电话里想说的事。",
+      (when ? when + "方便时" : "方便时") + "拨号，把刚记下的那件事说清楚。",
+    ], false, true);
+  }
+
+  const meeting = intents.find(part => /周会|例会|汇报|会议|项目|需求|提案|排期|方案/.test(part) &&
+    !/^(?:复习|学习|预习|写论文|写报告|回复|回邮件)/.test(part));
+  if (meeting) {
+    const subject = shortPhrase(meeting.replace(/^(?:准备|整理|写|做)\s*/, ""));
+    return plan([
+      "为「" + subject + "」先写一条目前最想说明的进展。",
+      "给这条进展配一个事实、数字或例子。",
+      "把还需要确认的一件事标在进展旁边。",
+    ]);
+  }
+
+  const writing = intents.find(part => /论文|报告|文档|文章|写作|提纲/.test(part));
+  if (writing) {
+    const subject = shortPhrase(writing.replace(/^(?:写|修改|改|撰写|起草|润色)\s*/, ""));
+    return plan([
+      "打开「" + subject + "」对应的文档，写下一条想讲的要点。",
+      "在要点下面加一个例子或一条手边有的证据。",
+      "读一遍刚写的内容，补一句它说明了什么。",
+    ]);
+  }
+
+  const message = intents.find(part => /邮件|回复|回信|发消息|联系|沟通/.test(part));
+  if (message) {
+    const medium = /邮件|回信/.test(message) ? "邮件" : "对话";
+    return plan([
+      "打开「" + shortPhrase(message) + "」相关的" + medium + "，先写一句想表达的重点。",
+      "把重点写进草稿，需要的话补一个细节。",
+      "重读草稿，核对对方和需要附上的信息，再决定是否发出。",
+    ]);
+  }
+
+  const study = intents.find(part => studyTask.test(part));
+  if (study) {
+    const scope = shortPhrase(study.replace(/^(?:复习|学习|预习|刷题|备考)\s*/, ""));
+    const first = !scope || /^(?:课程|课件|材料)$/.test(scope) ? firstStudyStep :
+      "打开「" + scope + "」的学习材料，圈出一个还说不清的概念。";
+    return plan([
+      first,
+      "用一句话解释刚圈出的概念，再翻开材料核对。",
+      "找一道和刚才内容有关的题，只写第一步解法。",
+    ]);
+  }
+
+  const tidy = intents.map(part => part.match(/^(?:收拾|整理|清理|打扫)\s*(.+)$/)).find(Boolean);
+  if (tidy) {
+    const area = shortPhrase(tidy[1]);
+    return plan([
+      "先清出「" + area + "」的一小块，把眼前同一类物品放到一起。",
+      "把这一类物品放回合适的位置。",
+      "看看刚清出的地方，再决定要不要继续一小块。",
+    ]);
+  }
+  if (detail) {
+    return plan(["把「" + shortPhrase(detail) + "」放到眼前，先找到最需要处理的一处。"]);
+  }
+  return plan(["打开和这件事最相关的一份材料，先找到要动手的地方。"], true);
+}
+
+function taskWithPlan(task, plan, source) {
+  const [step, ...upcomingSteps] = plan.steps;
+  return { ...task, step, upcomingSteps, planSource: source, planNeedsDetail: !!plan.needsDetail };
 }
 
 function suggest(title) {
-  return suggestPlan(title)[0];
+  return localPlan(title).steps[0];
 }
 
 function suggestContinuation(task) {
   const completed = task.completedSteps ?? [];
-  const [first, ...rest] = suggestPlan(task.title);
-  if (first === firstStudyStep && !completed.includes(first)) {
+  const [first, ...rest] = localPlan(task.title).steps;
+  if (first === firstStudyStep && rest.length && !completed.includes(first)) {
     rest[0] = "合上学习材料，凭记忆写下一句刚复习的内容，再翻开核对。";
   }
   return rest.find(step => !completed.includes(step)) ?? "";
@@ -998,7 +1149,7 @@ submit("ai-form", () => {
     prompt: $("ai-prompt").value.trim(),
   };
   $("ai-token").value = "";
-  $("ai-mode").textContent = "AI 模式";
+  $("ai-mode").textContent = "AI 建议已启用";
   $("ai-off").hidden = false;
   $("ai-status").textContent = "已启用。需要 AI 建议时会连接 " + endpoint.host + "。";
   if (stepSuggestion?.pending) stepSuggestion = null;
@@ -1010,7 +1161,7 @@ $("ai-off").onclick = () => {
   ai = null;
   $("ai-token").value = "";
   $("ai-off").hidden = true;
-  $("ai-mode").textContent = "离线模式";
+  $("ai-mode").textContent = "本地模板";
   $("ai-status").textContent = "已切回离线模板。";
   if (stepSuggestion?.pending) stepSuggestion = null;
   renderStepSuggestion();
@@ -1134,9 +1285,10 @@ $("use-suggestion").onclick = () => {
 
 submit("start", async () => {
   const title = $("task").value.trim();
-  if (!title || starting || activeTask()) return;
+  if (!title || starting || activeTask() || storageReadFailed) return;
   const config = ai;
-  let steps = suggestPlan(title);
+  let plan = localPlan(title);
+  let source = "local";
   let message = "第一步准备好了。";
   if (config) {
     const button = $("start-task");
@@ -1152,7 +1304,8 @@ submit("start", async () => {
     renderTasks();
     renderShelf();
     try {
-      steps = await requestSteps(title, config);
+      plan = { steps: await requestSteps(title, config) };
+      source = "ai";
       message = "建议已放进任务清单，先看看眼前这一步。";
     } catch (error) {
       message = connectionError(error) + "。这次先用离线建议。";
@@ -1171,8 +1324,19 @@ submit("start", async () => {
       renderShelf();
     }
   }
-  const [step, ...upcomingSteps] = steps;
-  activate({ ...newTask(title, step), upcomingSteps }, message, { consumeStartDraft: true });
+  activate(taskWithPlan(newTask(title), plan, source), message, { consumeStartDraft: true });
+});
+
+submit("clarify-form", () => {
+  const task = activeTask();
+  const detail = $("plan-detail").value.trim();
+  if (!detail || task?.status !== "working" || !task.planNeedsDetail || task.completedSteps?.length) return;
+  const revised = taskWithPlan(taskWithEdits(task), localPlan(task.title, detail), "local");
+  if (updateTask(revised, "已按补充内容更新建议。")) {
+    $("plan-detail").value = "";
+    $("plan-clarification").open = false;
+    focusTaskStep();
+  }
 });
 
 submit("adjust-form", async () => {
@@ -1204,9 +1368,10 @@ submit("adjust-form", async () => {
       return;
     }
     const edited = taskWithEdits(current);
-    const next = stepDone
+    const replanned = stepDone
       ? workingOnStep(edited, steps[0], steps.slice(1))
       : { ...edited, step: steps[0], upcomingSteps: steps.slice(1) };
+    const next = { ...replanned, planSource: "ai", planNeedsDetail: false };
     if (updateTask(next, "剩下的步骤已调整。")) {
       $("adjust-feedback").value = "";
       status.textContent = "清单已更新，可以继续手动修改。";
