@@ -4,13 +4,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FocusFlow 工作台</title>
 <link rel="icon" href="art/logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="desk.css?v=workbench-6">
-<script defer src="desk.js?v=workbench-6"></script>
+<link rel="stylesheet" href="desk.css?v=workbench-7">
+<script defer src="desk.js?v=workbench-7"></script>
 <main>
 <header>
 <a class="brand" href="../"><img src="art/logo.svg" width="38" height="38" alt="">FocusFlow</a>
 <div class="desk-tools">
-<span id="ai-mode">离线模式</span>
+<span id="ai-mode">本地模板</span>
 <button id="review-toggle" class="quiet" type="button" aria-controls="task-review" aria-expanded="false" hidden>回看任务</button>
 </div>
 </header>
@@ -24,7 +24,10 @@
 <a href="#daily-summary" data-work-link>每日总结</a>
 <a href="#ai-settings" data-work-link>AI 设置</a>
 </nav>
-<p id="storage-notice" role="status" hidden></p>
+<div id="storage-recovery" hidden>
+<p id="storage-notice" role="status"></p>
+<button id="retry-storage" class="quiet" type="button" hidden>重新读取</button>
+</div>
 <div class="workbench-grid">
 <div id="focus-pane">
 <div id="return-prompt" class="return-prompt" hidden>
@@ -55,7 +58,7 @@
 <div class="intro">
 <div>
 <h1 id="draft-heading" tabindex="-1"><span>想做什么？</span><span>从一小步开始。</span></h1>
-<p>写一句你想做的事，FocusFlow 帮你拆成几小步。</p>
+<p>写一句你想做的事，先看看可以从哪一步开始。</p>
 </div>
 <img class="sprout" src="art/sprout-detail.svg" width="84" height="88" alt="">
 </div>
@@ -79,6 +82,7 @@
 <button id="park-task" class="text-action" type="button">先做别的</button>
 <details id="task-options">
 <summary>任务操作</summary>
+<button id="detach-active-task" class="quiet" type="button" hidden>移为独立任务</button>
 <button id="clear-active-task" class="quiet" type="button">清空这个任务</button>
 </details>
 </div>
@@ -88,6 +92,7 @@
 <h2 id="state-heading" tabindex="-1">任务清单</h2>
 <span id="checklist-progress" class="optional"></span>
 </div>
+<p id="plan-source" class="optional" hidden></p>
 <progress id="step-progress" value="0" max="1" aria-label="小步完成进度"></progress>
 <ol id="checklist-steps"></ol>
 <div class="actions" id="completion-feedback">
@@ -95,6 +100,14 @@
 <button id="undo-step" class="text-action" type="button" hidden>撤销勾选</button>
 </div>
 </section>
+<details id="plan-clarification" hidden>
+<summary>补一句，让建议更具体（选填）</summary>
+<form id="clarify-form">
+<label for="plan-detail">这件事最先要处理的对象或材料是什么？</label>
+<input id="plan-detail" maxlength="120" required placeholder="比如，周会汇报的第一页">
+<button class="quiet" type="submit">更新本地建议</button>
+</form>
+</details>
 <p id="return-note" hidden></p>
 <div id="after-steps" class="actions" hidden>
 <button id="finish-task" type="button">完成这件事</button>
