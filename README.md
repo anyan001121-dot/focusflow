@@ -26,7 +26,7 @@ FocusFlow 想在这些具体的时刻帮一点忙。你可以把没整理好的�
 
 | 此刻可能发生的事 | FocusFlow 能帮你做的事 | 仍然由你决定 |
 | --- | --- | --- |
-| “我要写论文。”任务太大，不知道从哪儿碰起 | 给一个单独显示、可以编辑的第一步 | 这一步是否合适，想从哪里开始 |
+| “我要写论文。”任务太大，不知道从哪儿碰起 | 先显示一个能动手的步骤。接入 AI 后可展开清单，看看接下来做什么 | 这一步是否合适，想从哪里开始 |
 | 写着写着想起另一封邮件，怕忘就想切过去 | 把这件事暂存，保留原来的步骤 | 什么时候处理；有急事可以先暂停 |
 | 开会回来，忘了刚才停在哪里 | 保存目标、步骤和可选的返回提示 | 什么时候回来，不需要补打卡 |
 | 做完一小段，却离整个目标还很远 | 记录完成的小步骤，不把它说成整件事已完成 | 继续下一件事，或今天先停在这里 |
@@ -39,13 +39,19 @@ FocusFlow 想在这些具体的时刻帮一点忙。你可以把没整理好的�
 
 ![FocusFlow 三栏工作台：待接回、当前步骤和念头口袋](docs/screenshots/workbench/workbench.png)
 
-1. **先做一小步。** 写下任务，点「出发咯」。第一步可以自己改，当前步骤和返回提示的草稿刷新后也能接着写。
-2. **需要切走时，给自己留个位置。** 想到别的事就先放进念头口袋。如果要现在做，点「先做这件」，原任务的步骤和书签会一起保存。回来点「接回来」。
-3. **想知道推进了多少，就回看一下。** 每点一次「这一步完成了」，就记下一步。任务结束后，可以看到完成的小步、自己记下的分神原因、结果和「下次试试」。
+1. **先做一小步。** 写下任务，点「出发咯」。也可以点「试试『我需要复习课程』」填入示例。FocusFlow 会先给出一份短清单，并突出眼前的一步。
+2. **需要切走时，给自己留个位置。** 点任务标题旁的「先做别的」，工作台会保存当前位置并打开任务输入框。回来时看一眼「刚做完」和「接下来」，再点「接回来」。只想暂时记一下的事，可以放进念头口袋。
+3. **勾完一步，再看下一步。** 勾选眼前的动作后，进度条会前进，下一步自动接上。清单做完，可以完成这件事、再加一步，或今天先到这儿。想回看时，也可以留一句结果。
+
+输错了可以点「清空输入」。已开始的任务可以在「任务操作」里清空。标记整件事完成后，可以开始另一件事、撤销完成或看今日总结。「每日总结」按日期显示完成的小步和任务，也会列出今天做过、还可以继续的事。
 
 有几件事在手上时，可以先存到「待接回」，用任务树加子任务或找回书签。点「回看任务」可以查看别的任务，也可以勾选几件事，在本地汇总已有结果、停在哪儿和下一步。[工作台用法与后续规划](docs/workbench-roadmap.md)
 
-想要更贴合任务的第一步时，可以在「AI 设置」接入自己的接口。网页只在你点「出发咯」时发送任务和补充提示。接口失败时会给出离线建议。
+离线时会按任务类型给出三小步。也可以在「AI 设置」接入自己的接口，让建议考虑时间和手边的材料。比如写「改论文讨论部分，我只有十分钟」，可以先从写下一条最有把握的研究发现开始。
+
+步骤可以在「调整步骤」里直接修改。如果眼前这步还是太大，点「给我一步建议」，再选择「用这一步」或「再小一点」。离线时也可以用。
+
+如果几步都需要重排，可以在清单里点「请 AI 调整步骤」，告诉它卡在哪里。启用 AI 后，点「给我一步建议」会向你配置的接口发送输入和补充提示。输入为空时，会用任务名称和已有步骤进度。调整清单时还会发送你这次的反馈和清单进度。连接失败时，单步建议会切回离线，原清单也会保留。
 
 ## 我们希望它怎样陪你做事
 
@@ -110,7 +116,7 @@ Practice mode works without an API key and uses templates. Connected AI suggesti
 
 Use the installation commands above. The [development guide](docs/development.md) covers AI configuration, persistence, public deployment, and tests. The [scenario guide](docs/before-after.md) walks through the intended experience and its limits.
 
-The [browser workbench](https://anyan001121-dot.github.io/focusflow/try/) saves tasks, drafts, bookmarks, and recaps in the current browser. Use the task tree to revisit branches, or select several tasks to generate an offline summary. An optional AI endpoint receives the task and extra prompt when you start a new task from the home form. The separate Streamlit app uses local SQLite in single-user mode.
+The [browser workbench](https://anyan001121-dot.github.io/focusflow/try/) saves tasks, drafts, bookmarks, and recaps in the current browser. Use the task tree to revisit branches, or select several tasks to generate an offline summary. An optional AI endpoint can generate a short, editable checklist. Requesting an adjustment also sends your feedback and checklist progress, so the endpoint can revise the remaining steps. The separate Streamlit app uses local SQLite in single-user mode.
 
 If you try it, useful feedback is very concrete: **What were you trying to do? Which step helped you act, or made you stop?** You don't need to share private task content or medical information.
 
